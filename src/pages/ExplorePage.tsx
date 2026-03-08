@@ -80,7 +80,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Plant Directory */}
-      <SectionHeader title="Popular Plants 🌿" />
+      <SectionHeader title="Popular Plants 🌿" actionPath="/my-plants" />
       <div className="grid grid-cols-3 gap-2 px-4 pb-2">
         <PlantMiniCard image={monsteraImg} name="Monstera" species="M. deliciosa" waterDays={3} healthPercent={92} />
         <PlantMiniCard image={pothosImg} name="Pothos" species="E. aureum" waterDays={5} healthPercent={88} />
