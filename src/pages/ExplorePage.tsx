@@ -73,7 +73,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Live Streams */}
-      <SectionHeader title="🔴 Live Now" />
+      <SectionHeader title="🔴 Live Now" actionPath="/live" />
       <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide">
         <LiveCard image={liveProImg} title="Rare Aroid Unboxing!" host="RarePlant_Jay" hostAvatar={AVATAR2} viewers={891} />
         <LiveCard image={liveTourImg} title="Greenhouse Tour 🌿" host="GreenThumb_Amy" hostAvatar={AVATAR3} viewers={456} />
