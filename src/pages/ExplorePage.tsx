@@ -73,14 +73,14 @@ export default function ExplorePage() {
       </div>
 
       {/* Live Streams */}
-      <SectionHeader title="🔴 Live Now" />
+      <SectionHeader title="🔴 Live Now" actionPath="/live" />
       <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide">
         <LiveCard image={liveProImg} title="Rare Aroid Unboxing!" host="RarePlant_Jay" hostAvatar={AVATAR2} viewers={891} />
         <LiveCard image={liveTourImg} title="Greenhouse Tour 🌿" host="GreenThumb_Amy" hostAvatar={AVATAR3} viewers={456} />
       </div>
 
       {/* Plant Directory */}
-      <SectionHeader title="Popular Plants 🌿" />
+      <SectionHeader title="Popular Plants 🌿" actionPath="/my-plants" />
       <div className="grid grid-cols-3 gap-2 px-4 pb-2">
         <PlantMiniCard image={monsteraImg} name="Monstera" species="M. deliciosa" waterDays={3} healthPercent={92} />
         <PlantMiniCard image={pothosImg} name="Pothos" species="E. aureum" waterDays={5} healthPercent={88} />
@@ -91,7 +91,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Communities */}
-      <SectionHeader title="Top Communities" />
+      <SectionHeader title="Top Communities" actionPath="/community" />
       <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide">
         {[
           { name: "Indoor Jungle", members: "12.4k", img: liveTourImg },

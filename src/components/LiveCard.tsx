@@ -1,4 +1,5 @@
 import { Eye } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface LiveCardProps {
   image: string;
@@ -9,8 +10,13 @@ interface LiveCardProps {
 }
 
 export default function LiveCard({ image, title, host, hostAvatar, viewers }: LiveCardProps) {
+  const navigate = useNavigate();
+
   return (
-    <div className="relative min-w-[240px] rounded-2xl overflow-hidden shadow-card group cursor-pointer">
+    <div
+      className="relative min-w-[240px] rounded-2xl overflow-hidden shadow-card group cursor-pointer"
+      onClick={() => navigate("/live")}
+    >
       <img src={image} alt={title} className="w-full h-36 object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
       <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 to-transparent" />
       <div className="absolute top-2 left-2">
