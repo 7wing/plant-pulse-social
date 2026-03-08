@@ -31,8 +31,8 @@ export default function HomePage() {
     <div className="pb-24 gradient-hero min-h-screen">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg">
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/profile")}>
             <img src={AVATAR} alt="Profile" className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/30" />
             <div>
               <p className="text-xs text-muted-foreground">{greeting} 🌿</p>
@@ -43,22 +43,6 @@ export default function HomePage() {
             <button className="w-10 h-10 rounded-full bg-muted flex items-center justify-center relative" aria-label="Notifications">
               <Bell size={20} className="text-foreground" />
               <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-plant-live rounded-full border-2 border-background" />
-            </button>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="px-4 pb-3">
-          <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search plants, users, tips..."
-              className="w-full bg-muted rounded-xl pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              aria-label="Search"
-            />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 bg-primary rounded-lg p-1.5" aria-label="Scan plant">
-              <Camera size={14} className="text-primary-foreground" />
             </button>
           </div>
         </div>
