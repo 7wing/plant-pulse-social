@@ -91,7 +91,7 @@ export default function ExplorePage() {
       </div>
 
       {/* Communities */}
-      <SectionHeader title="Top Communities" />
+      <SectionHeader title="Top Communities" actionPath="/community" />
       <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide">
         {[
           { name: "Indoor Jungle", members: "12.4k", img: liveTourImg },
