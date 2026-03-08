@@ -1,4 +1,5 @@
-import { Search, Bell, Droplets, Camera, Sun, Scissors, Leaf } from "lucide-react";
+import { Bell, Droplets, Sun, Scissors, Leaf } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import monsteraImg from "@/assets/plant-monstera.jpg";
 import pothosImg from "@/assets/plant-pothos.jpg";
