@@ -1,24 +1,30 @@
-import { Search, Bell, Droplets, Camera } from "lucide-react";
-import SectionHeader from "@/components/SectionHeader";
-import LiveCard from "@/components/LiveCard";
-import PostCard from "@/components/PostCard";
-import ChallengeCard from "@/components/ChallengeCard";
-import PlantMiniCard from "@/components/PlantMiniCard";
+import { Search, Bell, Droplets, Camera, Sun, Scissors, Leaf } from "lucide-react";
 
 import monsteraImg from "@/assets/plant-monstera.jpg";
-import succulentImg from "@/assets/plant-succulent.jpg";
-import fiddleImg from "@/assets/plant-fiddle.jpg";
 import pothosImg from "@/assets/plant-pothos.jpg";
 import snakeImg from "@/assets/plant-snake.jpg";
-import liveProImg from "@/assets/live-propagation.jpg";
-import liveTourImg from "@/assets/live-tour.jpg";
+import fiddleImg from "@/assets/plant-fiddle.jpg";
 import calatImg from "@/assets/plant-calathea.jpg";
+import succulentImg from "@/assets/plant-succulent.jpg";
 
 const AVATAR = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face";
-const AVATAR2 = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face";
-const AVATAR3 = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face";
+
+const careItems = [
+  { name: "Monstera", task: "Water today", img: monsteraImg, urgent: true, icon: Droplets },
+  { name: "Pothos", task: "Fertilize", img: pothosImg, urgent: false, icon: Leaf },
+  { name: "Snake Plant", task: "Check soil", img: snakeImg, urgent: false, icon: Droplets },
+  { name: "Fiddle Leaf", task: "Rotate", img: fiddleImg, urgent: false, icon: Sun },
+  { name: "Calathea", task: "Mist leaves", img: calatImg, urgent: true, icon: Droplets },
+  { name: "Echeveria", task: "Prune", img: succulentImg, urgent: false, icon: Scissors },
+];
 
 export default function HomePage() {
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+
+  const completedCount = 2;
+  const totalCount = careItems.length;
+
   return (
     <div className="pb-24 gradient-hero min-h-screen">
       {/* Header */}
@@ -27,7 +33,7 @@ export default function HomePage() {
           <div className="flex items-center gap-3">
             <img src={AVATAR} alt="Profile" className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/30" />
             <div>
-              <p className="text-xs text-muted-foreground">Good morning 🌿</p>
+              <p className="text-xs text-muted-foreground">{greeting} 🌿</p>
               <p className="text-sm font-bold">Sarah Green</p>
             </div>
           </div>
@@ -56,114 +62,68 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Care Reminders */}
-      <SectionHeader title="Today's Care 💧" action="View all" />
-      <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide">
-        {[
-          { name: "Monstera", task: "Water today", img: monsteraImg, urgent: true },
-          { name: "Pothos", task: "Fertilize", img: pothosImg, urgent: false },
-          { name: "Snake Plant", task: "Check soil", img: snakeImg, urgent: false },
-        ].map((r) => (
-          <div key={r.name} className="flex items-center gap-3 min-w-[200px] bg-card rounded-xl p-2.5 shadow-card">
-            <img src={r.img} alt={r.name} className="w-12 h-12 rounded-lg object-cover" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold truncate">{r.name}</p>
-              <div className="flex items-center gap-1">
-                <Droplets size={12} className={r.urgent ? "text-primary" : "text-muted-foreground"} />
-                <p className={`text-xs ${r.urgent ? "text-primary font-medium" : "text-muted-foreground"}`}>{r.task}</p>
-              </div>
-            </div>
-            <button className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-              <Droplets size={14} className="text-primary" />
-            </button>
+      {/* Daily Progress Summary */}
+      <div className="mx-4 mt-2 mb-4 bg-card rounded-2xl shadow-card p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-bold">Today's Care 💧</p>
+            <p className="text-xs text-muted-foreground">{completedCount} of {totalCount} tasks done</p>
           </div>
-        ))}
+          <div className="w-12 h-12 rounded-full border-[3px] border-primary flex items-center justify-center">
+            <span className="text-xs font-bold text-primary">{Math.round((completedCount / totalCount) * 100)}%</span>
+          </div>
+        </div>
+        <div className="w-full bg-muted rounded-full h-2 mb-1">
+          <div
+            className="bg-primary rounded-full h-2 transition-all"
+            style={{ width: `${(completedCount / totalCount) * 100}%` }}
+          />
+        </div>
       </div>
 
-      {/* Live Now */}
-      <SectionHeader title="🔴 Live Now" action="Browse" />
-      <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide">
-        <LiveCard
-          image={liveProImg}
-          title="Propagation Demo: Monstera"
-          host="PlantMom_Lisa"
-          hostAvatar={AVATAR3}
-          viewers={342}
-        />
-        <LiveCard
-          image={liveTourImg}
-          title="My Jungle Room Tour 🌴"
-          host="UrbanJungle_Mike"
-          hostAvatar={AVATAR2}
-          viewers={128}
-        />
+      {/* Care Reminders List */}
+      <div className="px-4 space-y-2.5 pb-4">
+        {careItems.map((r, i) => {
+          const done = i < completedCount;
+          const Icon = r.icon;
+          return (
+            <div
+              key={r.name}
+              className={`flex items-center gap-3 bg-card rounded-xl p-3 shadow-card transition-opacity ${done ? "opacity-50" : ""}`}
+            >
+              <img src={r.img} alt={r.name} className="w-12 h-12 rounded-lg object-cover" />
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold truncate ${done ? "line-through" : ""}`}>{r.name}</p>
+                <div className="flex items-center gap-1">
+                  <Icon size={12} className={r.urgent && !done ? "text-primary" : "text-muted-foreground"} />
+                  <p className={`text-xs ${r.urgent && !done ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                    {r.task}
+                  </p>
+                </div>
+              </div>
+              <button
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                  done ? "bg-primary/20" : "bg-primary/10 hover:bg-primary/20"
+                }`}
+                aria-label={done ? `${r.task} completed` : `Mark ${r.task} as done`}
+              >
+                {done ? (
+                  <span className="text-primary text-sm">✓</span>
+                ) : (
+                  <Icon size={16} className="text-primary" />
+                )}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Trending Plants */}
-      <SectionHeader title="Trending Plants 🌱" />
-      <div className="grid grid-cols-3 gap-2 px-4 pb-2">
-        <PlantMiniCard image={monsteraImg} name="Monstera" species="M. deliciosa" waterDays={3} healthPercent={92} />
-        <PlantMiniCard image={calatImg} name="Calathea" species="C. ornata" waterDays={2} healthPercent={78} />
-        <PlantMiniCard image={succulentImg} name="Echeveria" species="E. elegans" waterDays={7} healthPercent={95} />
-      </div>
-
-      {/* Challenges */}
-      <SectionHeader title="Active Challenges 🏆" />
-      <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide">
-        <ChallengeCard
-          title="30-Day Propagation Challenge"
-          description="Propagate any plant and document your journey daily!"
-          participants={1243}
-          daysLeft={18}
-          progress={40}
-          image={liveProImg}
-        />
-        <ChallengeCard
-          title="Rare Plant Show & Tell"
-          description="Share your rarest plants and vote for the best collection."
-          participants={567}
-          daysLeft={5}
-          progress={83}
-          image={calatImg}
-        />
-      </div>
-
-      {/* Feed Posts */}
-      <SectionHeader title="Your Feed" />
-      <div className="px-4 space-y-4 pb-4">
-        <PostCard
-          avatar={AVATAR2}
-          username="UrbanJungle_Mike"
-          time="2 hours ago"
-          image={fiddleImg}
-          caption="My bird of paradise is thriving after repotting! New leaves already unfurling 🌿✨"
-          likes={234}
-          comments={45}
-          tags={["BirdOfParadise", "Repotting", "PlantProgress"]}
-        />
-        <PostCard
-          avatar={AVATAR3}
-          username="PlantMom_Lisa"
-          time="5 hours ago"
-          image={pothosImg}
-          caption="Golden pothos propagation update — week 4 roots are looking amazing!"
-          likes={567}
-          comments={89}
-          tags={["Pothos", "Propagation", "WaterRoots"]}
-        />
-
-        {/* Sponsored */}
-        <PostCard
-          avatar="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=100&h=100&fit=crop"
-          username="GreenGrow Co."
-          time="Promoted"
-          image={succulentImg}
-          caption="Give your plants the nutrients they deserve. Our organic plant food is now 20% off! 🌱🌸"
-          likes={1200}
-          comments={156}
-          tags={["OrganicPlantCare", "PlantFood"]}
-          isSponsored
-        />
+      {/* Quick Tips */}
+      <div className="mx-4 mb-4 gradient-leaf rounded-2xl p-4">
+        <p className="text-sm font-bold text-primary-foreground mb-1">🌱 Daily Tip</p>
+        <p className="text-xs text-primary-foreground/90">
+          Overwatering is the #1 killer of houseplants. Always check the top inch of soil before watering — if it's still moist, wait another day!
+        </p>
       </div>
     </div>
   );
