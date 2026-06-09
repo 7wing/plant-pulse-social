@@ -1,31 +1,47 @@
-import { Bell, Droplets, Sun, Scissors, Leaf } from "lucide-react";
+import { Bell, Droplets, Sun, Scissors, Leaf, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-import monsteraImg from "@/assets/plant-monstera.jpg";
-import pothosImg from "@/assets/plant-pothos.jpg";
-import snakeImg from "@/assets/plant-snake.jpg";
-import fiddleImg from "@/assets/plant-fiddle.jpg";
-import calatImg from "@/assets/plant-calathea.jpg";
-import succulentImg from "@/assets/plant-succulent.jpg";
+import { usePlants } from "@/queries/plants";
 
 const AVATAR = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face";
+const FALLBACK_PLANT_IMAGE = "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=400&h=400&fit=crop";
 
-const careItems = [
-  { name: "Monstera", task: "Water today", img: monsteraImg, urgent: true, icon: Droplets },
-  { name: "Pothos", task: "Fertilize", img: pothosImg, urgent: false, icon: Leaf },
-  { name: "Snake Plant", task: "Check soil", img: snakeImg, urgent: false, icon: Droplets },
-  { name: "Fiddle Leaf", task: "Rotate", img: fiddleImg, urgent: false, icon: Sun },
-  { name: "Calathea", task: "Mist leaves", img: calatImg, urgent: true, icon: Droplets },
-  { name: "Echeveria", task: "Prune", img: succulentImg, urgent: false, icon: Scissors },
-];
+function getTaskInfo(nextWaterAt: string | null) {
+  if (!nextWaterAt) return { text: "Not scheduled", urgent: false };
+  const next = new Date(nextWaterAt);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const nextDay = new Date(next);
+  nextDay.setHours(0, 0, 0, 0);
+  const diffMs = nextDay.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return { text: "Water today", urgent: true };
+  if (diffDays === 1) return { text: "Water tomorrow", urgent: false };
+  return { text: `Water in ${diffDays} days`, urgent: false };
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { data: plants = [], isLoading } = usePlants();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
-  const completedCount = 2;
-  const totalCount = careItems.length;
+  const careTasks = plants.map((plant) => {
+    const taskInfo = getTaskInfo(plant.next_water_at);
+    return {
+      id: plant.id,
+      name: plant.nickname,
+      task: taskInfo.text,
+      img: plant.image_url || FALLBACK_PLANT_IMAGE,
+      urgent: taskInfo.urgent,
+      icon: Droplets,
+    };
+  });
+
+  const totalCount = careTasks.length;
+  const urgentCount = careTasks.filter((t) => t.urgent).length;
+  // Consider non-urgent tasks as "completed" for the progress ring
+  const completedCount = totalCount - urgentCount;
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
     <div className="pb-24 gradient-hero min-h-screen">
@@ -53,56 +69,72 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-sm font-bold">Today's Care 💧</p>
-            <p className="text-xs text-muted-foreground">{completedCount} of {totalCount} tasks done</p>
+            <p className="text-xs text-muted-foreground">{urgentCount} of {totalCount} plants need water</p>
           </div>
           <div className="w-12 h-12 rounded-full border-[3px] border-primary flex items-center justify-center">
-            <span className="text-xs font-bold text-primary">{Math.round((completedCount / totalCount) * 100)}%</span>
+            <span className="text-xs font-bold text-primary">{progressPercent}%</span>
           </div>
         </div>
         <div className="w-full bg-muted rounded-full h-2 mb-1">
           <div
             className="bg-primary rounded-full h-2 transition-all"
-            style={{ width: `${(completedCount / totalCount) * 100}%` }}
+            style={{ width: `${totalCount > 0 ? (completedCount / totalCount) * 100 : 0}%` }}
           />
         </div>
       </div>
 
       {/* Care Reminders List */}
-      <div className="px-4 space-y-2.5 pb-4">
-        {careItems.map((r, i) => {
-          const done = i < completedCount;
-          const Icon = r.icon;
-          return (
-            <div
-              key={r.name}
-              className={`flex items-center gap-3 bg-card rounded-xl p-3 shadow-card transition-opacity ${done ? "opacity-50" : ""}`}
-            >
-              <img src={r.img} alt={r.name} className="w-12 h-12 rounded-lg object-cover" />
-              <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${done ? "line-through" : ""}`}>{r.name}</p>
-                <div className="flex items-center gap-1">
-                  <Icon size={12} className={r.urgent && !done ? "text-primary" : "text-muted-foreground"} />
-                  <p className={`text-xs ${r.urgent && !done ? "text-primary font-medium" : "text-muted-foreground"}`}>
-                    {r.task}
-                  </p>
-                </div>
-              </div>
-              <button
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-                  done ? "bg-primary/20" : "bg-primary/10 hover:bg-primary/20"
-                }`}
-                aria-label={done ? `${r.task} completed` : `Mark ${r.task} as done`}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={32} className="text-primary animate-spin" />
+        </div>
+      ) : totalCount === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <p className="text-sm text-muted-foreground">No plants yet. Add your first plant to see care reminders!</p>
+          <button
+            onClick={() => navigate("/my-plants")}
+            className="mt-3 text-primary font-medium text-sm hover:underline"
+          >
+            Go to My Plants →
+          </button>
+        </div>
+      ) : (
+        <div className="px-4 space-y-2.5 pb-4">
+          {careTasks.map((r, i) => {
+            const done = !r.urgent;
+            const Icon = r.icon;
+            return (
+              <div
+                key={r.id}
+                className={`flex items-center gap-3 bg-card rounded-xl p-3 shadow-card transition-opacity ${done ? "opacity-50" : ""}`}
               >
-                {done ? (
-                  <span className="text-primary text-sm">✓</span>
-                ) : (
-                  <Icon size={16} className="text-primary" />
-                )}
-              </button>
-            </div>
-          );
-        })}
-      </div>
+                <img src={r.img} alt={r.name} className="w-12 h-12 rounded-lg object-cover" />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold truncate ${done ? "line-through" : ""}`}>{r.name}</p>
+                  <div className="flex items-center gap-1">
+                    <Icon size={12} className={r.urgent ? "text-primary" : "text-muted-foreground"} />
+                    <p className={`text-xs ${r.urgent ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                      {r.task}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
+                    done ? "bg-primary/20" : "bg-primary/10 hover:bg-primary/20"
+                  }`}
+                  aria-label={done ? `${r.task} completed` : `Mark ${r.task} as done`}
+                >
+                  {done ? (
+                    <span className="text-primary text-sm">✓</span>
+                  ) : (
+                    <Icon size={16} className="text-primary" />
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Quick Tips */}
       <div className="mx-4 mb-4 gradient-leaf rounded-2xl p-4">

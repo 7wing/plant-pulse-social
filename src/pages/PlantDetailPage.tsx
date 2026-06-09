@@ -1,47 +1,132 @@
-import { ArrowLeft, Heart, Share2, Bookmark, Droplets, Sun, Thermometer, Wind, MessageCircle, HelpCircle, Camera } from "lucide-react";
+import { ArrowLeft, Heart, Share2, Bookmark, Droplets, Sun, Thermometer, Wind, HelpCircle, Camera, Loader2, X } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
-import monsteraImg from "@/assets/plant-monstera.jpg";
+import { usePlant } from "@/queries/plants";
+import { useCareLogs, useAddCareLog } from "@/queries/careLogs";
+import { useUpload } from "@/hooks/useUpload";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const AVATAR2 = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face";
-const AVATAR3 = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face";
-
-const careGuide = [
-  { icon: Droplets, label: "Water", value: "Every 1-2 weeks", detail: "Allow soil to dry between waterings", color: "text-primary" },
-  { icon: Sun, label: "Light", value: "Bright indirect", detail: "Tolerates medium light", color: "text-plant-warning" },
-  { icon: Thermometer, label: "Temperature", value: "65-85°F", detail: "Keep above 60°F", color: "text-plant-live" },
-  { icon: Wind, label: "Humidity", value: "60-80%", detail: "Loves high humidity", color: "text-plant-sponsored" },
-];
-
-const comments = [
-  { user: "PlantMom_Lisa", avatar: AVATAR3, text: "Mine started getting yellow leaves, any tips?", time: "2h ago", likes: 12 },
-  { user: "UrbanJungle_Mike", avatar: AVATAR2, text: "Looking healthy! What's your soil mix?", time: "4h ago", likes: 8 },
-];
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=800&h=600&fit=crop";
 
 export default function PlantDetailPage() {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const [careType, setCareType] = useState("water");
+  const [careNotes, setCareNotes] = useState("");
+  const [careImage, setCareImage] = useState<File | null>(null);
+  const [careImagePreview, setCareImagePreview] = useState<string | null>(null);
+
+  const addCareLog = useAddCareLog();
+  const { uploadFile: uploadCareImage, uploading: careUploading } = useUpload();
+
+  const { data: plant, isLoading, error } = usePlant(id);
+  const { data: careLogs = [] } = useCareLogs(id);
+
+  const healthPercent = plant?.health_percent ?? 100;
+
+  const careGuide = [
+    {
+      icon: Droplets,
+      label: "Water",
+      value: plant?.water_frequency_days ? `Every ${plant.water_frequency_days} days` : "Not set",
+      detail: "Allow soil to dry between waterings",
+      color: "text-primary",
+    },
+    {
+      icon: Sun,
+      label: "Light",
+      value: plant?.light_requirement || "Not set",
+      detail: "Tolerates medium light",
+      color: "text-plant-warning",
+    },
+    {
+      icon: Thermometer,
+      label: "Temperature",
+      value: "—",
+      detail: "Keep above 60°F",
+      color: "text-plant-live",
+    },
+    {
+      icon: Wind,
+      label: "Humidity",
+      value: "—",
+      detail: "Loves high humidity",
+      color: "text-plant-sponsored",
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-3">
+        <Loader2 size={32} className="animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading plant...</p>
+      </div>
+    );
+  }
+
+  if (error || !plant) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 px-4">
+        <p className="text-muted-foreground">Failed to load plant</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-sm font-semibold text-primary"
+        >
+          <ArrowLeft size={16} />
+          Go Back
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-8">
       {/* Hero image */}
       <div className="relative h-72">
-        <img src={monsteraImg} alt="Monstera deliciosa" className="w-full h-full object-cover" />
+        <img
+          src={plant.image_url || FALLBACK_IMAGE}
+          alt={plant.nickname || plant.scientific_name || "Plant"}
+          className="w-full h-full object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-foreground/20" />
         <div className="absolute top-4 left-4 right-4 flex justify-between">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center" aria-label="Back">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+            aria-label="Back"
+          >
             <ArrowLeft size={18} className="text-primary-foreground" />
           </button>
           <div className="flex gap-2">
-            <button onClick={() => setLiked(!liked)} className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center" aria-label="Like">
-              <Heart size={18} className={liked ? "fill-plant-live text-plant-live" : "text-primary-foreground"} />
+            <button
+              onClick={() => setLiked(!liked)}
+              className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+              aria-label="Like"
+            >
+              <Heart
+                size={18}
+                className={liked ? "fill-plant-live text-plant-live" : "text-primary-foreground"}
+              />
             </button>
-            <button onClick={() => setSaved(!saved)} className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center" aria-label="Save">
-              <Bookmark size={18} className={saved ? "fill-primary text-primary" : "text-primary-foreground"} />
+            <button
+              onClick={() => setSaved(!saved)}
+              className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+              aria-label="Save"
+            >
+              <Bookmark
+                size={18}
+                className={saved ? "fill-primary text-primary" : "text-primary-foreground"}
+              />
             </button>
-            <button className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center" aria-label="Share">
+            <button
+              className="w-9 h-9 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
+              aria-label="Share"
+            >
               <Share2 size={18} className="text-primary-foreground" />
             </button>
           </div>
@@ -60,19 +145,23 @@ export default function PlantDetailPage() {
         <div className="bg-card rounded-2xl shadow-elevated p-4">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-xl font-bold">Monstera Deliciosa</h1>
-              <p className="text-sm text-muted-foreground italic">Monstera deliciosa</p>
-              <p className="text-xs text-primary font-medium mt-1">Swiss Cheese Plant • Araceae</p>
+              <h1 className="text-xl font-bold">{plant.nickname || "Unnamed Plant"}</h1>
+              <p className="text-sm text-muted-foreground italic">
+                {plant.scientific_name || plant.species || "Unknown species"}
+              </p>
+              {plant.common_name && (
+                <p className="text-xs text-primary font-medium mt-1">{plant.common_name}</p>
+              )}
             </div>
             <div className="bg-plant-success/10 rounded-xl px-3 py-1.5 text-center">
-              <p className="text-lg font-bold text-plant-success">92%</p>
+              <p className="text-lg font-bold text-plant-success">{healthPercent}%</p>
               <p className="text-[10px] text-plant-success font-medium">Healthy</p>
             </div>
           </div>
 
-          <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-            Known for its iconic split leaves, the Monstera deliciosa is a tropical beauty native to Central America. Easy to care for and a stunning statement piece in any space.
-          </p>
+          {plant.notes && (
+            <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{plant.notes}</p>
+          )}
         </div>
       </div>
 
@@ -99,8 +188,17 @@ export default function PlantDetailPage() {
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
           {["Week 1", "Week 4", "Week 8", "Now"].map((label, i) => (
             <div key={label} className="min-w-[100px] text-center">
-              <div className={`aspect-square rounded-xl overflow-hidden ${i === 3 ? "ring-2 ring-primary" : ""}`}>
-                <img src={monsteraImg} alt={`${label} growth`} className="w-full h-full object-cover" style={{ filter: i < 2 ? `brightness(${0.7 + i * 0.1}) saturate(${0.5 + i * 0.2})` : "none" }} />
+              <div
+                className={`aspect-square rounded-xl overflow-hidden ${i === 3 ? "ring-2 ring-primary" : ""}`}
+              >
+                <img
+                  src={plant.image_url || FALLBACK_IMAGE}
+                  alt={`${label} growth`}
+                  className="w-full h-full object-cover"
+                  style={{
+                    filter: i < 2 ? `brightness(${0.7 + i * 0.1}) saturate(${0.5 + i * 0.2})` : "none",
+                  }}
+                />
               </div>
               <p className="text-xs font-medium mt-1">{label}</p>
             </div>
@@ -120,29 +218,147 @@ export default function PlantDetailPage() {
       <div className="px-4 mt-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold">Discussion</h2>
-          <span className="text-xs text-muted-foreground">24 comments</span>
         </div>
-        <div className="space-y-3">
-          {comments.map((c) => (
-            <div key={c.user} className="flex gap-2.5">
-              <img src={c.avatar} alt={c.user} className="w-8 h-8 rounded-full object-cover" />
-              <div className="flex-1 bg-card rounded-xl rounded-tl-md p-3 shadow-card">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold">{c.user}</span>
-                  <span className="text-[10px] text-muted-foreground">{c.time}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">{c.text}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <button className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Heart size={12} /> {c.likes}
-                  </button>
-                  <button className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MessageCircle size={12} /> Reply
-                  </button>
+        <p className="text-sm text-muted-foreground text-center py-4">Community tips coming soon!</p>
+      </div>
+
+      {/* Care History */}
+      <div className="px-4 mt-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-bold">Care History</h2>
+          <span className="text-xs text-muted-foreground">{careLogs.length} entries</span>
+        </div>
+        {careLogs.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No care logs yet. Log your first care event below!</p>
+        ) : (
+          <div className="space-y-3">
+            {careLogs.map((log) => (
+              <div key={log.id} className="bg-card rounded-2xl shadow-card p-3 flex gap-3">
+                {log.image_url ? (
+                  <img src={log.image_url} alt={log.care_type} className="w-14 h-14 rounded-xl object-cover" />
+                ) : (
+                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Droplets size={20} className="text-primary" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-bold capitalize">{log.care_type}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {log.logged_at ? new Date(log.logged_at).toLocaleDateString() : "—"}
+                    </span>
+                  </div>
+                  {log.notes && <p className="text-xs text-muted-foreground mt-1 truncate">{log.notes}</p>}
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Care Logging */}
+      <div className="px-4 mt-4">
+        <h2 className="text-base font-bold mb-3">Log Care</h2>
+        <div className="bg-card rounded-2xl shadow-card p-4 flex flex-col gap-3">
+          {/* Care type selector */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Type</label>
+            <Select value={careType} onValueChange={setCareType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="water">Water</SelectItem>
+                <SelectItem value="fertilize">Fertilize</SelectItem>
+                <SelectItem value="prune">Prune</SelectItem>
+                <SelectItem value="repot">Repot</SelectItem>
+                <SelectItem value="note">Note</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Notes (optional)</label>
+            <Textarea
+              value={careNotes}
+              onChange={(e) => setCareNotes(e.target.value)}
+              placeholder="Add any notes..."
+              rows={3}
+            />
+          </div>
+
+          {/* Image upload */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Photo (optional)</label>
+            {careImagePreview ? (
+              <div className="relative w-full h-40 rounded-xl overflow-hidden">
+                <img src={careImagePreview} alt="Care preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCareImage(null);
+                    setCareImagePreview(null);
+                  }}
+                  className="absolute top-2 right-2 w-7 h-7 rounded-full bg-foreground/60 backdrop-blur-sm flex items-center justify-center"
+                >
+                  <X size={14} className="text-primary-foreground" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 w-full h-24 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-primary transition-colors text-muted-foreground">
+                <Camera size={20} />
+                <span className="text-sm font-medium">Add photo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setCareImage(file);
+                      setCareImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </label>
+            )}
+          </div>
+
+          {/* Error message */}
+          {addCareLog.isError && (
+            <p className="text-xs text-destructive">Failed to log care. Please try again.</p>
+          )}
+
+          {/* Submit button */}
+          <button
+            onClick={async () => {
+              try {
+                let careImageUrl: string | undefined;
+                if (careImage) {
+                  careImageUrl = (await uploadCareImage(careImage, { bucket: "plant-images" })).url;
+                }
+                await addCareLog.mutateAsync({
+                  plant_id: id!,
+                  care_type: careType,
+                  notes: careNotes || undefined,
+                  image_url: careImageUrl,
+                });
+                setCareType("water");
+                setCareNotes("");
+                setCareImage(null);
+                setCareImagePreview(null);
+              } catch {
+                // error state is handled by isError
+              }
+            }}
+            disabled={addCareLog.isPending || careUploading}
+            className="w-full py-2.5 bg-primary text-primary-foreground font-semibold text-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {(addCareLog.isPending || careUploading) && <Loader2 size={16} className="animate-spin" />}
+            {(addCareLog.isPending || careUploading) ? "Logging..." : "Log Care"}
+          </button>
         </div>
       </div>
     </div>

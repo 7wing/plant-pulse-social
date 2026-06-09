@@ -1,32 +1,43 @@
-import { Plus, Camera, Search, Grid3X3, List, Droplets, Sun, Scissors, Calendar, BookOpen } from "lucide-react";
+import { Plus, Camera, Search, Grid3X3, List, Droplets, Sun, Scissors, Calendar, BookOpen, Loader2, Leaf, X } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { usePlants, useAddPlant } from "@/queries/plants";
+import type { Plant, PlantInsert } from "@/queries/plants";
+import { useUpload } from "@/hooks/useUpload";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
-import monsteraImg from "@/assets/plant-monstera.jpg";
-import succulentImg from "@/assets/plant-succulent.jpg";
-import fiddleImg from "@/assets/plant-fiddle.jpg";
-import pothosImg from "@/assets/plant-pothos.jpg";
-import snakeImg from "@/assets/plant-snake.jpg";
-import calatImg from "@/assets/plant-calathea.jpg";
+const plantSchema = z.object({
+  nickname: z.string().min(1, "Nickname is required").max(50),
+  species: z.string().optional(),
+  scientific_name: z.string().optional(),
+  water_frequency_days: z.coerce.number().min(1).max(90).optional(),
+  light_requirement: z.string().optional(),
+  notes: z.string().optional(),
+});
 
-interface UserPlant {
-  id: number;
-  name: string;
-  species: string;
-  image: string;
-  health: number;
-  nextWater: string;
-  light: string;
-  lastUpdate: string;
+type PlantForm = z.infer<typeof plantSchema>;
+
+const PLANT_FALLBACK = "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=400&h=400&fit=crop";
+
+function formatNextWater(dateStr: string | null): string {
+  if (!dateStr) return "Not set";
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return "Overdue";
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  return `In ${diff} days`;
 }
 
-const plants: UserPlant[] = [
-  { id: 1, name: "Monty", species: "Monstera deliciosa", image: monsteraImg, health: 92, nextWater: "Today", light: "Bright indirect", lastUpdate: "2 days ago" },
-  { id: 2, name: "Goldie", species: "Epipremnum aureum", image: pothosImg, health: 88, nextWater: "Tomorrow", light: "Low-Medium", lastUpdate: "1 day ago" },
-  { id: 3, name: "Sandy", species: "Sansevieria trifasciata", image: snakeImg, health: 96, nextWater: "In 5 days", light: "Any", lastUpdate: "5 days ago" },
-  { id: 4, name: "Rosa", species: "Calathea ornata", image: calatImg, health: 74, nextWater: "Today", light: "Medium indirect", lastUpdate: "3 days ago" },
-  { id: 5, name: "Succy", species: "Echeveria elegans", image: succulentImg, health: 95, nextWater: "In 3 days", light: "Bright direct", lastUpdate: "1 week ago" },
-  { id: 6, name: "Fig", species: "Strelitzia reginae", image: fiddleImg, health: 85, nextWater: "In 2 days", light: "Bright indirect", lastUpdate: "4 days ago" },
-];
+function isWaterToday(plant: Plant): boolean {
+  return formatNextWater(plant.next_water_at) === "Today";
+}
 
 const tabs = [
   { id: "collection", label: "Collection", icon: Grid3X3 },
@@ -35,8 +46,49 @@ const tabs = [
 ];
 
 export default function MyPlantsPage() {
+  const { data: plants = [], isLoading } = usePlants();
+  const addPlantMutation = useAddPlant();
+  const { uploadFile, uploading } = useUpload();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState("collection");
+  const [addOpen, setAddOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<PlantForm>({
+    resolver: zodResolver(plantSchema),
+  });
+
+  const onSubmit = async (data: PlantForm) => {
+    try {
+      let imageUrl: string | undefined;
+      if (selectedImage) {
+        const result = await uploadFile(selectedImage, { bucket: "plant-images" });
+        imageUrl = result.url;
+      }
+      const payload: Omit<PlantInsert, "owner_id"> = {
+        nickname: data.nickname,
+        species: data.species,
+        scientific_name: data.scientific_name,
+        water_frequency_days: data.water_frequency_days,
+        light_requirement: data.light_requirement,
+        notes: data.notes,
+        image_url: imageUrl,
+      };
+      await addPlantMutation.mutateAsync(payload);
+      reset();
+      setSelectedImage(null);
+      setImagePreview(null);
+      setAddOpen(false);
+    } catch {
+      // error is handled by addPlantMutation state
+    }
+  };
 
   const healthColor = (h: number) =>
     h > 70 ? "text-plant-success" : h > 40 ? "text-plant-warning" : "text-plant-live";
@@ -90,8 +142,8 @@ export default function MyPlantsPage() {
       <div className="flex gap-2 px-4 py-3">
         {[
           { label: "Plants", value: plants.length, icon: "🌿" },
-          { label: "Healthy", value: plants.filter((p) => p.health > 70).length, icon: "💚" },
-          { label: "Need Care", value: plants.filter((p) => p.nextWater === "Today").length, icon: "💧" },
+          { label: "Healthy", value: plants.filter((p) => (p.health_percent ?? 100) > 70).length, icon: "💚" },
+          { label: "Need Care", value: plants.filter((p) => isWaterToday(p)).length, icon: "💧" },
         ].map((s) => (
           <div key={s.label} className="flex-1 bg-card rounded-xl p-3 shadow-card text-center">
             <p className="text-lg">{s.icon}</p>
@@ -105,7 +157,10 @@ export default function MyPlantsPage() {
         <>
           {/* Add plant */}
           <div className="px-4 mb-3">
-            <button className="w-full flex items-center gap-3 p-3 bg-card rounded-2xl shadow-card border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors">
+            <button
+              onClick={() => setAddOpen(true)}
+              className="w-full flex items-center gap-3 p-3 bg-card rounded-2xl shadow-card border-2 border-dashed border-primary/30 hover:border-primary/60 transition-colors"
+            >
               <div className="w-12 h-12 rounded-xl gradient-leaf flex items-center justify-center">
                 <Plus size={24} className="text-primary-foreground" />
               </div>
@@ -118,28 +173,40 @@ export default function MyPlantsPage() {
           </div>
 
           {/* Plant grid/list */}
-          {view === "grid" ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={32} className="animate-spin text-primary" />
+            </div>
+          ) : plants.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Leaf size={32} className="text-muted-foreground" />
+              </div>
+              <p className="text-base font-semibold">No plants yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Tap + to add your first plant!</p>
+            </div>
+          ) : view === "grid" ? (
             <div className="grid grid-cols-2 gap-3 px-4 pb-4">
               {plants.map((p) => (
                 <div key={p.id} className="bg-card rounded-2xl shadow-card overflow-hidden animate-fade-in cursor-pointer hover:shadow-elevated transition-shadow">
                   <div className="relative aspect-square">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={p.image_url || PLANT_FALLBACK} alt={p.nickname} className="w-full h-full object-cover" />
                     <div className="absolute top-2 right-2 bg-card/90 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${healthBg(p.health)}`} />
-                      <span className={`text-xs font-bold ${healthColor(p.health)}`}>{p.health}%</span>
+                      <div className={`w-1.5 h-1.5 rounded-full ${healthBg(p.health_percent ?? 100)}`} />
+                      <span className={`text-xs font-bold ${healthColor(p.health_percent ?? 100)}`}>{p.health_percent ?? 100}%</span>
                     </div>
-                    {p.nextWater === "Today" && (
+                    {isWaterToday(p) && (
                       <div className="absolute top-2 left-2 bg-primary rounded-full p-1.5 animate-pulse-soft">
                         <Droplets size={12} className="text-primary-foreground" />
                       </div>
                     )}
                   </div>
                   <div className="p-2.5">
-                    <p className="text-sm font-bold truncate">{p.name}</p>
+                    <p className="text-sm font-bold truncate">{p.nickname}</p>
                     <p className="text-xs text-muted-foreground truncate">{p.species}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <Droplets size={11} className="text-primary" />
-                      <span className="text-xs text-muted-foreground">{p.nextWater}</span>
+                      <span className="text-xs text-muted-foreground">{formatNextWater(p.next_water_at)}</span>
                     </div>
                   </div>
                 </div>
@@ -149,18 +216,18 @@ export default function MyPlantsPage() {
             <div className="px-4 space-y-2 pb-4">
               {plants.map((p) => (
                 <div key={p.id} className="bg-card rounded-2xl shadow-card p-3 flex items-center gap-3 animate-fade-in cursor-pointer hover:shadow-elevated transition-shadow">
-                  <img src={p.image} alt={p.name} className="w-16 h-16 rounded-xl object-cover" />
+                  <img src={p.image_url || PLANT_FALLBACK} alt={p.nickname} className="w-16 h-16 rounded-xl object-cover" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate">{p.name}</p>
+                    <p className="text-sm font-bold truncate">{p.nickname}</p>
                     <p className="text-xs text-muted-foreground truncate">{p.species}</p>
                     <div className="flex items-center gap-3 mt-1">
                       <div className="flex items-center gap-1">
                         <Droplets size={11} className="text-primary" />
-                        <span className="text-xs text-muted-foreground">{p.nextWater}</span>
+                        <span className="text-xs text-muted-foreground">{formatNextWater(p.next_water_at)}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Sun size={11} className="text-plant-warning" />
-                        <span className="text-xs text-muted-foreground">{p.light}</span>
+                        <span className="text-xs text-muted-foreground">{p.light_requirement || "Not set"}</span>
                       </div>
                     </div>
                   </div>
@@ -170,13 +237,13 @@ export default function MyPlantsPage() {
                         <circle cx="20" cy="20" r="16" fill="none" className="stroke-muted" strokeWidth="3" />
                         <circle
                           cx="20" cy="20" r="16" fill="none"
-                          className={p.health > 70 ? "stroke-plant-success" : p.health > 40 ? "stroke-plant-warning" : "stroke-plant-live"}
+                          className={(p.health_percent ?? 100) > 70 ? "stroke-plant-success" : (p.health_percent ?? 100) > 40 ? "stroke-plant-warning" : "stroke-plant-live"}
                           strokeWidth="3"
-                          strokeDasharray={`${(p.health / 100) * 100.5} 100.5`}
+                          strokeDasharray={`${((p.health_percent ?? 100) / 100) * 100.5} 100.5`}
                           strokeLinecap="round"
                         />
                       </svg>
-                      <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${healthColor(p.health)}`}>{p.health}</span>
+                      <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${healthColor(p.health_percent ?? 100)}`}>{p.health_percent ?? 100}</span>
                     </div>
                   </div>
                 </div>
@@ -242,7 +309,163 @@ export default function MyPlantsPage() {
             </div>
           ))}
         </div>
-      )}
+
+      {/* Add Plant Sheet */}
+      <Sheet open={addOpen} onOpenChange={setAddOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>Add Plant</SheetTitle>
+            <SheetDescription>Add a new plant to your collection</SheetDescription>
+          </SheetHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {addPlantMutation.isError && (
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+                Failed to add plant. Please try again.
+              </div>
+            )}
+
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <Label>Plant Photo</Label>
+              {imagePreview ? (
+                <div className="relative w-full h-40 rounded-xl overflow-hidden">
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                    className="absolute top-2 right-2 w-8 h-8 bg-background/80 rounded-full flex items-center justify-center"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-muted-foreground/25 rounded-xl cursor-pointer hover:bg-muted transition-colors">
+                  <Camera size={24} className="text-muted-foreground mb-2" />
+                  <span className="text-xs text-muted-foreground">Tap to add a photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedImage(file);
+                        setImagePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Nickname */}
+            <div className="space-y-2">
+              <Label htmlFor="nickname">Nickname <span className="text-destructive">*</span></Label>
+              <Input
+                id="nickname"
+                placeholder="e.g. Monty the Monstera"
+                {...register("nickname")}
+              />
+              {errors.nickname && (
+                <p className="text-xs text-destructive">{errors.nickname.message}</p>
+              )}
+            </div>
+
+            {/* Species */}
+            <div className="space-y-2">
+              <Label htmlFor="species">Species</Label>
+              <Input id="species" placeholder="e.g. Monstera deliciosa" {...register("species")} />
+              {errors.species && (
+                <p className="text-xs text-destructive">{errors.species.message}</p>
+              )}
+            </div>
+
+            {/* Scientific Name */}
+            <div className="space-y-2">
+              <Label htmlFor="scientific_name">Scientific Name</Label>
+              <Input
+                id="scientific_name"
+                placeholder="e.g. Monstera deliciosa"
+                {...register("scientific_name")}
+              />
+              {errors.scientific_name && (
+                <p className="text-xs text-destructive">{errors.scientific_name.message}</p>
+              )}
+            </div>
+
+            {/* Water Frequency */}
+            <div className="space-y-2">
+              <Label htmlFor="water_frequency_days">Water Every (days)</Label>
+              <Input
+                id="water_frequency_days"
+                type="number"
+                min={1}
+                max={90}
+                placeholder="e.g. 7"
+                {...register("water_frequency_days")}
+              />
+              {errors.water_frequency_days && (
+                <p className="text-xs text-destructive">{errors.water_frequency_days.message}</p>
+              )}
+            </div>
+
+            {/* Light Requirement */}
+            <div className="space-y-2">
+              <Label htmlFor="light_requirement">Light Requirement</Label>
+              <Input
+                id="light_requirement"
+                placeholder="e.g. Bright indirect"
+                {...register("light_requirement")}
+              />
+              {errors.light_requirement && (
+                <p className="text-xs text-destructive">{errors.light_requirement.message}</p>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <textarea
+                id="notes"
+                placeholder="Any care notes..."
+                rows={3}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                {...register("notes")}
+              />
+              {errors.notes && (
+                <p className="text-xs text-destructive">{errors.notes.message}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  reset();
+                  setAddOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1 gradient-leaf text-primary-foreground hover:opacity-90"
+                disabled={isSubmitting || addPlantMutation.isPending || uploading}
+              >
+                {(isSubmitting || addPlantMutation.isPending || uploading) ? (
+                  <><Loader2 size={16} className="animate-spin" /> Adding...</>
+                ) : (
+                  "Add Plant"
+                )}
+              </Button>
+            </div>
+          </form>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "fermentId": "019eae75-0041-703c-8b3f-1985d0e74156",
+  "phaseId": "phase-1",
+  "phaseName": "Conversations + Query Hooks",
+  "attempt": 1,
+  "timestamp": "2026-06-09T22:39:15.497Z",
+  "goal": "All chat data-fetching hooks exist and a conversation list page is browseable.",
+  "summary": "Conversations + Query Hooks phase complete. Created conversations.ts with useConversations (fetches conversations with last message, other participant profile, unread count) and useCreateConversation (checks for duplicate before creating). Created messages.ts with useMessages, useSendMessage (updates conversation last_message_at), and useMarkAsRead. Built ConversationsPage.tsx with conversation list UI (avatar, name, last message preview, unread badge, date). Updated App.tsx routing: /chat → ConversationsPage, /chat/:conversationId → ChatPage. Wired ChatPage to read conversationId from useParams. TypeScript compiles with 0 errors.",
+  "stepSummaries": "  1. Create src/queries/conversations.ts with useConversations (fetch with last message info) and useCreateConversation [verified]\n  2. Create src/queries/messages.ts with useMessages(conversationId), useSendMessage, and useMarkAsRead [verified]\n  3. Build a ConversationsList component/page showing conversations with avatars, usernames, last message preview, and unread count [verified]\n  4. Update App.tsx to route /chat to the conversation list, and pass conversationId to ChatPage for threads [verified]\n  5. Type-check after changes [verified]",
+  "diffAvailable": true,
+  "diffFilesChanged": "package-lock.json              | 2389 ++++++++++++++++++++++++++++++++++++----\n package.json                   |    9 +-\n src/App.tsx                    |   48 +-\n src/components/PostCard.tsx    |  205 +++-\n src/components/ui/command.tsx  |    2 +-\n src/components/ui/textarea.tsx |    2 +-\n src/index.css                  |    4 +-\n src/pages/ChatPage.tsx         |   31 +-\n src/pages/CommunityPage.tsx    |  362 ++++--\n src/pages/HomePage.tsx         |  140 ++-\n src/pages/MyPlantsPage.tsx     |  309 +++++-\n src/pages/PlantDetailPage.tsx  |  324 +++++-\n src/pages/ProfilePage.tsx      |  274 ++++-\n tailwind.config.ts             |    3 +-\n 14 files changed, 3528 insertions(+), 574 deletions(-)",
+  "flags": [],
+  "derivedGrade": "A",
+  "reviewerRationale": "All gates pass; project checks validate.",
+  "gateVerdicts": [
+    {
+      "id": "F1",
+      "verdict": "pass",
+      "rationale": "Step 1 verified 2 hooks in conversations.ts. Step 2 verified 3 hooks in messages.ts. Step 3 verified useConversations in ConversationsPage.tsx and routing in App.tsx. Step 4 verified useParams in ChatPage.tsx. Step 5 verified tsc 0 errors.",
+      "evidence": "conversations.ts: 2 hooks. messages.ts: 3 hooks. ConversationsPage.tsx: useConversations. App.tsx: /chat + /chat/:conversationId. ChatPage.tsx: useParams. tsc: 0 errors."
+    },
+    {
+      "id": "F2",
+      "verdict": "pass",
+      "rationale": "Phase goal met: all chat query hooks exist and conversation list page is browseable. Query hooks feed into Phase 2 (real-time messages + chat thread).",
+      "evidence": "conversations.ts, messages.ts exist. ConversationsPage.tsx renders list. App.tsx has proper routing."
+    },
+    {
+      "id": "F3",
+      "verdict": "pass",
+      "rationale": "Nothing deferred. All planned work complete.",
+      "evidence": "n/a"
+    }
+  ],
+  "projectChecks": {
+    "discovered": true,
+    "anyFailed": false,
+    "commands": [
+      {
+        "kind": "test",
+        "command": "npm test",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      },
+      {
+        "kind": "lint",
+        "command": "npm run lint",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      }
+    ]
+  }
+}

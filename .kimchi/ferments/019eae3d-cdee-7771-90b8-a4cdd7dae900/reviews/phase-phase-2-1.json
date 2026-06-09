@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "fermentId": "019eae3d-cdee-7771-90b8-a4cdd7dae900",
+  "phaseId": "phase-2",
+  "phaseName": "Feed + Likes + Comments + Posts",
+  "attempt": 1,
+  "timestamp": "2026-06-09T21:51:07.893Z",
+  "goal": "CommunityPage shows a real infinite-scrolling social feed with likes, comments, and post creation.",
+  "summary": "Feed + Likes + Comments + Posts phase complete. CommunityPage now shows a real infinite-scrolling feed via useFeedPosts with IntersectionObserver. PostCard adapted to accept real post data with author profiles joined. Added optimistic like/unlike via useLikePost/useUnlikePost with usePostLikeStatus. Added comments bottom Sheet in PostCard with useComments and useAddComment. Added NewPostSheet to CommunityPage with react-hook-form + zod (caption required, optional tags/plant/image), image upload to post-images bucket, and FAB trigger button. TypeScript compiles with 0 errors.",
+  "stepSummaries": "  1. Wire CommunityPage to useFeedPosts with useInfiniteQuery, replacing hardcoded PostCards with real post data [verified]\n  2. Adapt PostCard to accept a Post object, wire optimistic like/unlike via useLikePost + useUnlikePost, and add a comments button that opens a comments sheet [verified]\n  3. Build a CommentsSheet component (or inline in PostCard) that displays comments via useComments and allows adding comments via useAddComment [verified]\n  4. Add a NewPostSheet to CommunityPage with react-hook-form + zod for caption, image upload, optional plant tag, and tags array [verified]\n  5. Type-check after UI changes [verified]",
+  "diffAvailable": true,
+  "diffFilesChanged": "package-lock.json              | 2389 ++++++++++++++++++++++++++++++++++++----\n package.json                   |    9 +-\n src/App.tsx                    |   46 +-\n src/components/PostCard.tsx    |  205 +++-\n src/components/ui/command.tsx  |    2 +-\n src/components/ui/textarea.tsx |    2 +-\n src/index.css                  |    4 +-\n src/pages/CommunityPage.tsx    |  362 ++++--\n src/pages/HomePage.tsx         |  140 ++-\n src/pages/MyPlantsPage.tsx     |  309 +++++-\n src/pages/PlantDetailPage.tsx  |  324 +++++-\n src/pages/ProfilePage.tsx      |  240 +++-\n tailwind.config.ts             |    3 +-\n 13 files changed, 3480 insertions(+), 555 deletions(-)",
+  "flags": [],
+  "derivedGrade": "A",
+  "reviewerRationale": "All gates pass; project checks validate.",
+  "gateVerdicts": [
+    {
+      "id": "F1",
+      "verdict": "pass",
+      "rationale": "Step 1 verified useFeedPosts/fetchNextPage/hasNextPage via grep (6 matches). Step 2 verified useLikePost/useUnlikePost in PostCard.tsx via grep (3 matches). Step 3 verified useComments/useAddComment in PostCard.tsx via grep (3 matches). Step 4 verified useCreatePost/useForm in CommunityPage.tsx via grep (4 matches). Step 5 verified tsc 0 errors. All verifications concrete.",
+      "evidence": "grep counts: useFeedPosts(6), useLikePost(3), useComments(3), useCreatePost(4). tsc: 0 errors."
+    },
+    {
+      "id": "F2",
+      "verdict": "pass",
+      "rationale": "Phase goal met: CommunityPage shows real infinite feed, PostCard has likes/comments, NewPostSheet allows creating posts. Query hooks from Phase 1 are consumed successfully. Output feeds into Phase 3 (follow/unfollow + Following tab filter).",
+      "evidence": "CommunityPage.tsx uses useFeedPosts, PostCard.tsx uses useLikePost/useUnlikePost/useComments, NewPostSheet uses useCreatePost."
+    },
+    {
+      "id": "F3",
+      "verdict": "pass",
+      "rationale": "Nothing deferred. Search bar and Trending tags in CommunityPage remain decorative — out of Sprint 3 scope. Groups and Challenges tabs were intentionally removed in favor of For You/Following.",
+      "evidence": "Search bar and trending tags remain static by design."
+    }
+  ],
+  "projectChecks": {
+    "discovered": true,
+    "anyFailed": false,
+    "commands": [
+      {
+        "kind": "test",
+        "command": "npm test",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      },
+      {
+        "kind": "lint",
+        "command": "npm run lint",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      }
+    ]
+  }
+}

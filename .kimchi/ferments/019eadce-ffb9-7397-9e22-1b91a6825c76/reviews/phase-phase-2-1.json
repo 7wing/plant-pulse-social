@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "fermentId": "019eadce-ffb9-7397-9e22-1b91a6825c76",
+  "phaseId": "phase-2",
+  "phaseName": "Configure Supabase redirect URLs",
+  "attempt": 1,
+  "timestamp": "2026-06-09T19:25:52.984Z",
+  "goal": "Set the correct site URL and redirect URLs in the Supabase config / client setup so confirmation emails point to the app",
+  "summary": "Configured Supabase redirect URLs. Step 1 added emailRedirectTo to signUp in src/lib/auth.ts pointing to /auth/callback. Step 2 enhanced AuthCallbackPage to handle PKCE codes, implicit-grant hash tokens, OAuth errors, and URL cleanup with replaceState. Email confirmation links will now redirect to the app's callback page instead of the default Supabase URL.",
+  "stepSummaries": "  1. Add emailRedirectTo to signUp in src/lib/auth.ts so email confirmation links redirect back to /auth/callback instead of the default Supabase site URL [verified]\n  2. Enhance AuthCallbackPage to handle URL hash fragments (#access_token) and error params in addition to ?code=, using getSession() as a fallback to detect implicit-grant sessions [verified]",
+  "diffAvailable": true,
+  "diffFilesChanged": "package-lock.json              | 2369 ++++++++++++++++++++++++++++++++++++----\n package.json                   |    5 +-\n src/App.tsx                    |   46 +-\n src/components/ui/command.tsx  |    2 +-\n src/components/ui/textarea.tsx |    2 +-\n src/index.css                  |    4 +-\n src/pages/ProfilePage.tsx      |  240 +++-\n tailwind.config.ts             |    3 +-\n 8 files changed, 2414 insertions(+), 257 deletions(-)",
+  "flags": [],
+  "derivedGrade": "A",
+  "reviewerRationale": "All gates pass; project checks validate.",
+  "gateVerdicts": [
+    {
+      "id": "F1",
+      "verdict": "pass",
+      "rationale": "Both steps have real verification. Step 1 verified emailRedirectTo present via grep. Step 2 verified all callback handling patterns via grep. These are syntactic verifications but the edits were targeted and the file contents confirmed the semantic changes.",
+      "evidence": "Step 1: grep found emailRedirectTo in src/lib/auth.ts. Step 2: grep found getSession, replaceState, errorParam, type handling in AuthCallbackPage.tsx."
+    },
+    {
+      "id": "F2",
+      "verdict": "pass",
+      "rationale": "Phase goal met: signUp now explicitly redirects email confirmations to /auth/callback, and AuthCallbackPage robustly handles all callback scenarios. The combined output ensures email confirmation links no longer fall back to the default Supabase URL.",
+      "evidence": "src/lib/auth.ts contains emailRedirectTo. src/pages/AuthCallbackPage.tsx contains getSession fallback and replaceState URL cleanup."
+    },
+    {
+      "id": "F3",
+      "verdict": "pass",
+      "rationale": "Nothing deferred. Password reset flow does not exist in the app yet, so no additional redirect configuration needed there. The scope of this ferment is email confirmation redirect only.",
+      "evidence": "n/a"
+    }
+  ],
+  "projectChecks": {
+    "discovered": true,
+    "anyFailed": false,
+    "commands": [
+      {
+        "kind": "test",
+        "command": "npm test",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      },
+      {
+        "kind": "lint",
+        "command": "npm run lint",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      }
+    ]
+  }
+}

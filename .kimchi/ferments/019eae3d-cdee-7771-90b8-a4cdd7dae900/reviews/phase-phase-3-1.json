@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "fermentId": "019eae3d-cdee-7771-90b8-a4cdd7dae900",
+  "phaseId": "phase-3",
+  "phaseName": "Follow/Unfollow + Following Feed",
+  "attempt": 1,
+  "timestamp": "2026-06-09T22:08:27.208Z",
+  "goal": "Users can follow/unfollow profiles and see a filtered feed of only followed users.",
+  "summary": "Follow/Unfollow + Following Feed phase complete. Added follow/unfollow buttons to ProfilePage using useFollow/useUnfollow/useIsFollowing, conditionally hidden when viewing own profile. Shows 'Follow'/'Following'/'Unfollow' states with loading spinner. Following tab filter was already wired via useFeedPosts hook with follows table query. Added real-time follower/following counts using useFollowerCount and useFollowingCount hooks that query Supabase count() on the follows table, replacing stale profile columns. Counts invalidate on follow/unfollow success for immediate UI updates. TypeScript compiles with 0 errors.",
+  "stepSummaries": "  1. Add follow/unfollow buttons to ProfilePage using useFollow, useUnfollow, and useIsFollowing [verified]\n  2. Wire the 'Following' tab in CommunityPage to filter feed posts by followed user IDs, using the follows table [verified]\n  3. Update follower/following counts display on ProfilePage to reflect real data [verified]\n  4. Final type-check verification [verified]",
+  "diffAvailable": true,
+  "diffFilesChanged": "package-lock.json              | 2389 ++++++++++++++++++++++++++++++++++++----\n package.json                   |    9 +-\n src/App.tsx                    |   46 +-\n src/components/PostCard.tsx    |  205 +++-\n src/components/ui/command.tsx  |    2 +-\n src/components/ui/textarea.tsx |    2 +-\n src/index.css                  |    4 +-\n src/pages/CommunityPage.tsx    |  362 ++++--\n src/pages/HomePage.tsx         |  140 ++-\n src/pages/MyPlantsPage.tsx     |  309 +++++-\n src/pages/PlantDetailPage.tsx  |  324 +++++-\n src/pages/ProfilePage.tsx      |  274 ++++-\n tailwind.config.ts             |    3 +-\n 13 files changed, 3514 insertions(+), 555 deletions(-)",
+  "flags": [],
+  "derivedGrade": "A",
+  "reviewerRationale": "All gates pass; project checks validate.",
+  "gateVerdicts": [
+    {
+      "id": "F1",
+      "verdict": "pass",
+      "rationale": "Step 1 verified useFollow/useUnfollow/useIsFollowing in ProfilePage.tsx via grep (4 matches). Step 2 verified Following tab and useFeedPosts in CommunityPage.tsx via grep (3 matches). Step 3 confirmed stale followers_count/following_count removed from ProfilePage (0 grep matches) and added useFollowerCount/useFollowingCount. Step 4 verified tsc 0 errors. All verifications concrete.",
+      "evidence": "ProfilePage.tsx: follow hooks (4 matches), CommunityPage.tsx: Following tab + useFeedPosts (3 matches). Stale columns removed (0 matches). tsc: 0 errors."
+    },
+    {
+      "id": "F2",
+      "verdict": "pass",
+      "rationale": "Phase goal met: follow/unfollow buttons exist on ProfilePage, Following tab filters feed by followed users, and follower/following counts reflect real data. All query hooks from Phase 1 are consumed.",
+      "evidence": "ProfilePage.tsx shows follow button and real counts. CommunityPage.tsx shows Following tab filter. follows.ts has count hooks."
+    },
+    {
+      "id": "F3",
+      "verdict": "pass",
+      "rationale": "Nothing deferred. Search bar and trending tags remain decorative. Groups and Challenges tabs were removed in favor of For You/Following in earlier phase.",
+      "evidence": "Search/trending tags noted as out of Sprint 3 scope."
+    }
+  ],
+  "projectChecks": {
+    "discovered": true,
+    "anyFailed": false,
+    "commands": [
+      {
+        "kind": "test",
+        "command": "npm test",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      },
+      {
+        "kind": "lint",
+        "command": "npm run lint",
+        "exitCode": 0,
+        "durationMs": 0,
+        "timedOut": false
+      }
+    ]
+  }
+}

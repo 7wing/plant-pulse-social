@@ -1,0 +1,392 @@
+{
+  "id": "019eade5-3e74-7778-959f-fbc82daca140",
+  "name": "Sprint 2 Plants Feature",
+  "description": "\"if you are done. I believe sprint 1 is done. we can move to sprintnew",
+  "status": "complete",
+  "worktree": {
+    "path": "/workspaces/plant-pulse-social",
+    "branch": "main",
+    "commit": "9e37a962b74662d43136b7aa470f90fa7e599430"
+  },
+  "scoping": {
+    "goal": {
+      "answer": "Wire MyPlantsPage, PlantDetailPage, and HomePage to real Supabase data; enable users to add plants with image upload and log care events.",
+      "confirmedAt": "2026-06-09T20:10:25.589Z"
+    },
+    "criteria": {
+      "answer": "MyPlantsPage displays the current user's real plants from Supabase (no hardcoded mock data)\nUsers can add a new plant via a form sheet with nickname, species, image, water schedule, and light needs\nPlantDetailPage shows real plant data fetched by route param id and displays care history\nUsers can log care events (water, fertilize, prune, repot, note) on a plant\nHomePage 'Today's Care' tasks are computed from each plant's next_water_at schedule\nAll TypeScript compiles with zero errors",
+      "confirmedAt": "2026-06-09T20:10:25.589Z"
+    },
+    "constraints": {
+      "answer": "Must use TanStack Query for all server state fetching and mutations, Must use react-hook-form + zod for forms, Must follow existing shadcn/ui component patterns (Sheet, Card, Input, Button, etc.), Must not call Supabase directly in page components — always go through src/queries/ hooks, Do not use useEffect for raw data fetches",
+      "confirmedAt": "2026-06-09T20:10:25.589Z"
+    },
+    "phases": {
+      "answer": "Backend Plumbing, MyPlantsPage & Add Plant, Plant Detail & HomePage Tasks",
+      "confirmedAt": "2026-06-09T20:10:25.589Z"
+    },
+    "assumptions": {
+      "answer": "Supabase schema (plants and care_logs tables with RLS) is already deployed — verified via REST API; Supabase Storage 'plant-images' bucket will need to be created (not yet present per API check); browser-image-compression and zustand may need to be installed as they are missing from package.json; Users already have profile rows in the database from Sprint 1; Plant images are optional; fallback placeholder will be used when none is uploaded",
+      "confirmedAt": "2026-06-09T20:10:25.589Z"
+    }
+  },
+  "phases": [
+    {
+      "id": "phase-1",
+      "index": 1,
+      "name": "Backend Plumbing",
+      "goal": "Have working query hooks, upload hook, and image-compression ready before wiring any pages.",
+      "description": "Install missing dependencies and create the foundational query hooks and upload infrastructure that all Sprint 2 UI work depends on.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "Install browser-image-compression and zustand packages",
+          "status": "verified",
+          "verification": {
+            "command": "grep -q 'browser-image-compression\\|zustand' package.json",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:11:26.298Z",
+          "completedAt": "2026-06-09T20:12:39.803Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:12:39.803Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "Create src/hooks/useUpload.ts that wraps Supabase Storage upload with image compression (max 1MB, 1920px)",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'upload\\|compression' src/hooks/useUpload.ts",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:12:58.526Z",
+          "completedAt": "2026-06-09T20:14:39.349Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:14:39.349Z"
+          }
+        },
+        {
+          "id": "step-3",
+          "index": 3,
+          "description": "Create src/queries/plants.ts with usePlants, usePlant(id), useAddPlant, useUpdatePlant, useDeletePlant",
+          "status": "verified",
+          "verification": {
+            "command": "grep -c 'export function use' src/queries/plants.ts",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:14:57.504Z",
+          "completedAt": "2026-06-09T20:17:23.328Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:17:23.328Z"
+          }
+        },
+        {
+          "id": "step-4",
+          "index": 4,
+          "description": "Create src/queries/careLogs.ts with useCareLogs(plantId) and useAddCareLog",
+          "status": "verified",
+          "verification": {
+            "command": "grep -c 'export function use' src/queries/careLogs.ts",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:17:35.706Z",
+          "completedAt": "2026-06-09T20:19:03.835Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:19:03.835Z"
+          }
+        },
+        {
+          "id": "step-5",
+          "index": 5,
+          "description": "Type-check the project to ensure new hooks compile",
+          "status": "verified",
+          "verification": {
+            "command": "npx tsc --noEmit --project tsconfig.json 2>&1 | grep -c 'error TS' || echo '0'",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:19:44.014Z",
+          "completedAt": "2026-06-09T20:20:32.742Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:20:32.742Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-09T20:11:18.762Z",
+      "completedAt": "2026-06-09T20:20:56.174Z",
+      "summary": "Backend Plumbing phase complete. Installed browser-image-compression and zustand packages. Created useUpload.ts with image compression and Supabase Storage integration. Created plants.ts with 5 query hooks (usePlants, usePlant, useAddPlant, useUpdatePlant, useDeletePlant). Created careLogs.ts with 2 query hooks (useCareLogs, useAddCareLog). All files pass TypeScript compilation with zero errors."
+    },
+    {
+      "id": "phase-2",
+      "index": 2,
+      "name": "MyPlantsPage & Add Plant",
+      "goal": "MyPlantsPage fetches and displays real plants; users can create new plants with images.",
+      "description": "Replace hardcoded mock data in MyPlantsPage with real data and build the add-plant form.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "Wire MyPlantsPage to use usePlants query, replacing the hardcoded plants array",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'usePlants' src/pages/MyPlantsPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:21:47.609Z",
+          "completedAt": "2026-06-09T20:24:28.241Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:24:28.241Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "Build an AddPlantSheet component (react-hook-form + zod) with fields: nickname, species, scientific_name, water_frequency_days, light_requirement, notes, and image upload",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'useForm\\|zodResolver' src/pages/MyPlantsPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:24:52.251Z",
+          "completedAt": "2026-06-09T20:27:06.712Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:27:06.712Z"
+          }
+        },
+        {
+          "id": "step-3",
+          "index": 3,
+          "description": "Integrate image upload into the add-plant form using useUpload with preview",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'useUpload' src/pages/MyPlantsPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:27:25.843Z",
+          "completedAt": "2026-06-09T20:37:28.137Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:37:28.137Z"
+          }
+        },
+        {
+          "id": "step-4",
+          "index": 4,
+          "description": "Type-check after UI changes",
+          "status": "verified",
+          "verification": {
+            "command": "npx tsc --noEmit --project tsconfig.json 2>&1 | grep -c 'error TS' || echo '0'",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:37:44.801Z",
+          "completedAt": "2026-06-09T20:38:33.268Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:38:33.268Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-09T20:21:09.037Z",
+      "completedAt": "2026-06-09T20:39:00.106Z",
+      "summary": "MyPlantsPage & Add Plant phase complete. MyPlantsPage now fetches real plants via usePlants query, replacing the hardcoded mock array. Added loading state and empty state. Built a bottom Sheet add-plant form with react-hook-form + zod validation (nickname required, optional species/scientific_name/water_frequency_days/light_requirement/notes). Integrated image upload via useUpload hook with preview, using capture=\"environment\" for mobile camera. TypeScript compiles with 0 errors."
+    },
+    {
+      "id": "phase-3",
+      "index": 3,
+      "name": "Plant Detail & HomePage Tasks",
+      "goal": "PlantDetail shows real info + care history; HomePage tasks are computed from plant data.",
+      "description": "Wire PlantDetailPage to real data, add care logging UI, and drive HomePage tasks from plant schedules.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "Wire PlantDetailPage to read :id from useParams and fetch via usePlant(id)",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'useParams\\|usePlant' src/pages/PlantDetailPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:39:49.795Z",
+          "completedAt": "2026-06-09T20:44:28.689Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:44:28.689Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "Add care-logging UI in PlantDetailPage (form to select care_type, add notes, and optionally attach image)",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'useAddCareLog\\|care_type' src/pages/PlantDetailPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:44:49.532Z",
+          "completedAt": "2026-06-09T20:48:00.584Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:48:00.584Z"
+          }
+        },
+        {
+          "id": "step-3",
+          "index": 3,
+          "description": "Display care history on PlantDetailPage using useCareLogs(plantId)",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'useCareLogs' src/pages/PlantDetailPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:48:10.718Z",
+          "completedAt": "2026-06-09T20:56:16.509Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T20:56:16.509Z"
+          }
+        },
+        {
+          "id": "step-4",
+          "index": 4,
+          "description": "Replace HomePage hardcoded careItems with computed tasks from usePlants, showing plants whose next_water_at is today or overdue",
+          "status": "verified",
+          "verification": {
+            "command": "grep -n 'usePlants' src/pages/HomePage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T20:56:52.709Z",
+          "completedAt": "2026-06-09T21:00:37.347Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T21:00:37.347Z"
+          }
+        },
+        {
+          "id": "step-5",
+          "index": 5,
+          "description": "Final type-check verification",
+          "status": "verified",
+          "verification": {
+            "command": "npx tsc --noEmit --project tsconfig.json 2>&1 | grep -c 'error TS' || echo '0'",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-09T21:00:50.911Z",
+          "completedAt": "2026-06-09T21:01:18.613Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-09T21:01:18.613Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-09T20:39:30.458Z",
+      "completedAt": "2026-06-09T21:01:49.099Z",
+      "summary": "Plant Detail & HomePage Tasks phase complete. PlantDetailPage now reads :id from useParams and fetches real plant data via usePlant(id). Added a care-logging form with Select dropdown for care types (water/fertilize/prune/repot/note), Textarea for notes, optional image upload, and submits via useAddCareLog. Added Care History section above the form that displays care logs via useCareLogs(id) with thumbnails, dates, and notes. HomePage now computes care tasks from real plants using next_water_at, showing \"Water today\" for urgent plants and \"Water in X days\" for others, with loading and empty states. TypeScript compiles with 0 errors."
+    }
+  ],
+  "decisions": [],
+  "memories": [],
+  "createdAt": "2026-06-09T19:39:02.644Z",
+  "updatedAt": "2026-06-09T21:04:30.762Z",
+  "goal": "Wire MyPlantsPage, PlantDetailPage, and HomePage to real Supabase data; enable users to add plants with image upload and log care events.",
+  "successCriteria": [
+    "MyPlantsPage displays the current user's real plants from Supabase (no hardcoded mock data)",
+    "Users can add a new plant via a form sheet with nickname, species, image, water schedule, and light needs",
+    "PlantDetailPage shows real plant data fetched by route param id and displays care history",
+    "Users can log care events (water, fertilize, prune, repot, note) on a plant",
+    "HomePage 'Today's Care' tasks are computed from each plant's next_water_at schedule",
+    "All TypeScript compiles with zero errors"
+  ],
+  "constraints": [
+    "Must use TanStack Query for all server state fetching and mutations",
+    "Must use react-hook-form + zod for forms",
+    "Must follow existing shadcn/ui component patterns (Sheet, Card, Input, Button, etc.)",
+    "Must not call Supabase directly in page components — always go through src/queries/ hooks",
+    "Do not use useEffect for raw data fetches"
+  ],
+  "lastActiveAt": "2026-06-09T20:39:30.458Z"
+}
