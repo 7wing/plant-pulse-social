@@ -1,73 +1,123 @@
-# Welcome to your Lovable project
+# PlantPal
 
-## Project info
+Your personal plant care companion.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- **Authentication** — Email/password and Google OAuth via Supabase Auth
+- **My Plants** — Add plants, log care (watering, fertilizing), track health
+- **Social Feed** — Share posts with photos, like and comment, follow other users
+- **Direct Chat** — Real-time messaging with other plant lovers
+- **Live Streaming** — Go live or watch others stream plant care sessions via LiveKit
+- **Plant ID** — Identify any plant by scanning its leaf with Plant.id AI
+- **Push Notifications** — Care reminders via web-push (daily cron at 8 AM)
+- **PWA** — Installable on desktop and mobile, offline-capable
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+Vite + React 18 + TypeScript + Tailwind CSS + shadcn/ui + Supabase + TanStack Query v5 + React Router v6 + Zustand + LiveKit + Plant.id API + web-push + vite-plugin-pwa
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+```bash
+# Install dependencies
+npm install
 
-**Use your preferred IDE**
+# Copy environment template
+cp .env.example .env.local
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+# Fill in all required environment variables (see .env.example for the full list)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Environment Variables
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+**Frontend** (`VITE_` prefixed — safe to expose):
 
-**Use GitHub Codespaces**
+| Variable | Description |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key (public) |
+| `VITE_PLANT_ID_API_KEY` | Plant.id API key (from admin.kindwise.com) |
+| `VITE_LIVEKIT_URL` | LiveKit Cloud WebSocket URL (e.g. `wss://your-app.livekit.cloud`) |
+| `VITE_VAPID_PUBLIC_KEY` | Web-push VAPID public key |
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+**Server-only** (Supabase Edge Functions — never expose to frontend):
 
-## What technologies are used for this project?
+| Variable | Description |
+|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
+| `LIVEKIT_API_KEY` | LiveKit API key |
+| `LIVEKIT_API_SECRET` | LiveKit API secret |
+| `VAPID_PRIVATE_KEY` | Web-push VAPID private key |
 
-This project is built with:
+Generate VAPID keys: `npx web-push generate-vapid-keys`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## Deployment
 
-## How can I deploy this project?
+### Frontend (Vercel)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+1. Connect your GitHub repo to Vercel.
+2. Add environment variables in Vercel project settings.
+3. Deploy on push to `main` (or use the deploy workflow in `.github/workflows/deploy.yml`).
 
-## Can I connect a custom domain to my Lovable project?
+### Backend (Supabase)
 
-Yes, you can!
+1. Run the full database schema in the Supabase SQL Editor (tables: `profiles`, `plants`, `care_logs`, `posts`, `likes`, `comments`, `follows`, `messages`, `conversations`, `live_streams`, `challenges`, `challenge_entries`, `push_tokens`).
+2. Enable Row Level Security on every table and add policies as documented.
+3. Enable Realtime on `messages` and `live_streams` tables.
+4. Create storage buckets: `avatars`, `plant-images`, `post-images`, `chat-images` (private), `live-thumbnails`.
+5. Deploy edge functions from `supabase/functions/`.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Push Reminders Cron
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Schedule the `send-care-reminders` edge function as a daily cron at 8 AM:
+
+```
+0 8 * * *
+```
+
+Or from the Supabase dashboard: Edge Functions → send-care-reminders → Triggers → Add trigger → Cron → `0 8 * * *`.
+
+## Testing
+
+```bash
+# Unit tests (Vitest)
+npm run test
+
+# E2E tests (Playwright)
+npm run e2e
+
+# TypeScript check
+npx tsc --noEmit
+
+# Lint
+npm run lint
+```
+
+Install Playwright browsers: `npx playwright install --with-deps chromium`
+
+## Project Structure
+
+```
+src/
+├── components/      # Reusable UI components
+├── hooks/           # Custom React hooks (useAuth, useUpload, etc.)
+├── lib/             # Utilities (supabase client, plant.id, notifications)
+├── pages/           # Route-level page components
+├── queries/         # TanStack Query hooks (plants, posts, profile, etc.)
+├── store/           # Zustand global state store
+└── test/            # Vitest unit tests
+
+supabase/
+└── functions/       # Supabase Edge Functions
+    ├── livekit-token/       # Generates LiveKit room tokens
+    └── send-care-reminders/ # Push notification cron
+
+e2e/                 # Playwright E2E tests
+.github/workflows/   # CI (ci.yml) and Deploy (deploy.yml) pipelines
+```
+
+For a detailed production setup guide, see [PRODUCTION_GUIDE.md](./PRODUCTION_GUIDE.md).

@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import monsteraImg from "@/assets/plant-monstera.jpg";
 import succulentImg from "@/assets/plant-succulent.jpg";
@@ -159,8 +160,20 @@ export default function ProfilePage() {
         {/* Profile info */}
         <div className="flex flex-col items-center pt-4 pb-6 px-4">
           {profileLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 size={24} className="text-primary animate-spin" />
+            <div className="flex flex-col items-center gap-3">
+              <Skeleton className="w-24 h-24 rounded-full" />
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-3 w-full max-w-[250px]" />
+              <div className="flex gap-6 mt-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="text-center space-y-1">
+                    <Skeleton className="h-5 w-8" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <>
@@ -179,7 +192,7 @@ export default function ProfilePage() {
                 </div>
               )}
               {bio && (
-                <p className="text-sm text-center mt-2 text-muted-foreground max-w-[250px]">
+                <p className="text-sm text-center mt-2 text-muted-foreground max-w-[250px] md:max-w-md">
                   {bio}
                 </p>
               )}
@@ -199,7 +212,7 @@ export default function ProfilePage() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-2 mt-4 w-full max-w-[300px]">
+              <div className="flex gap-2 mt-4 w-full max-w-[300px] md:max-w-none">
                 {/* Follow/Unfollow + Message — only shown when viewing another user's profile */}
                 {profile?.id && profile?.id !== currentUser?.id && (
                   <>
@@ -309,7 +322,7 @@ export default function ProfilePage() {
 
       {/* Tab content */}
       {activeTab === "plants" && (
-        <div className="grid grid-cols-3 gap-1 px-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 px-4">
           {[monsteraImg, pothosImg, snakeImg, calatImg, succulentImg, fiddleImg, liveTourImg, liveProImg, monsteraImg].map((img, i) => (
             <div key={i} className="aspect-square rounded-lg overflow-hidden">
               <img src={img} alt={`Plant ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
@@ -319,7 +332,7 @@ export default function ProfilePage() {
       )}
 
       {activeTab === "posts" && (
-        <div className="grid grid-cols-3 gap-1 px-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 px-4">
           {[fiddleImg, pothosImg, monsteraImg, succulentImg, calatImg, snakeImg].map((img, i) => (
             <div key={i} className="aspect-square rounded-lg overflow-hidden relative">
               <img src={img} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />

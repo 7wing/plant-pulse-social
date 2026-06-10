@@ -1,6 +1,7 @@
 import { Bell, Droplets, Sun, Scissors, Leaf, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { usePlants } from "@/queries/plants";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const AVATAR = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face";
 const FALLBACK_PLANT_IMAGE = "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=400&h=400&fit=crop";
@@ -85,8 +86,17 @@ export default function HomePage() {
 
       {/* Care Reminders List */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 size={32} className="text-primary animate-spin" />
+        <div className="px-4 space-y-2.5 pb-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 bg-card rounded-xl p-3 shadow-card">
+              <Skeleton className="w-12 h-12 rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="w-9 h-9 rounded-full" />
+            </div>
+          ))}
         </div>
       ) : totalCount === 0 ? (
         <div className="px-4 py-8 text-center">
@@ -99,7 +109,7 @@ export default function HomePage() {
           </button>
         </div>
       ) : (
-        <div className="px-4 space-y-2.5 pb-4">
+        <div className="px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pb-4">
           {careTasks.map((r, i) => {
             const done = !r.urgent;
             const Icon = r.icon;

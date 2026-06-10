@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { requestNotificationPermission } from '@/lib/notifications'
 import type { User } from '@supabase/supabase-js'
 
 export function useAuth() {
@@ -15,6 +16,7 @@ export function useAuth() {
       // Ensure profile exists for the initial session (covers OAuth logins)
       if (session?.user) {
         ensureProfile(session.user)
+        requestNotificationPermission(session.user.id).catch(console.error)
       }
     })
 
@@ -28,6 +30,7 @@ export function useAuth() {
             // Defer to avoid recursion inside onAuthStateChange
             setTimeout(() => {
               ensureProfile(session.user)
+              requestNotificationPermission(session.user.id).catch(console.error)
             }, 0)
           }
         }

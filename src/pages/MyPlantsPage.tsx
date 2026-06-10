@@ -10,6 +10,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatNextWater, healthColor, healthBg } from "@/lib/plantUtils";
 
 const plantSchema = z.object({
   nickname: z.string().min(1, "Nickname is required").max(50),
@@ -24,20 +26,7 @@ type PlantForm = z.infer<typeof plantSchema>;
 
 const PLANT_FALLBACK = "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=400&h=400&fit=crop";
 
-function formatNextWater(dateStr: string | null): string {
-  if (!dateStr) return "Not set";
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff < 0) return "Overdue";
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Tomorrow";
-  return `In ${diff} days`;
-}
-
-function isWaterToday(plant: Plant): boolean {
-  return formatNextWater(plant.next_water_at) === "Today";
-}
+const isWaterToday = (plant: Plant) => formatNextWater(plant.next_water_at) === "Today";
 
 const tabs = [
   { id: "collection", label: "Collection", icon: Grid3X3 },
@@ -90,11 +79,7 @@ export default function MyPlantsPage() {
     }
   };
 
-  const healthColor = (h: number) =>
-    h > 70 ? "text-plant-success" : h > 40 ? "text-plant-warning" : "text-plant-live";
 
-  const healthBg = (h: number) =>
-    h > 70 ? "bg-plant-success" : h > 40 ? "bg-plant-warning" : "bg-plant-live";
 
   return (
     <div className="pb-24 min-h-screen">
@@ -174,8 +159,32 @@ export default function MyPlantsPage() {
 
           {/* Plant grid/list */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 size={32} className="animate-spin text-primary" />
+            <div className={view === "grid" ? "grid grid-cols-2 gap-3 px-4 pb-4" : "px-4 space-y-2 pb-4"}>
+              {[1, 2, 3, 4].map((i) =>
+                view === "grid" ? (
+                  <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden">
+                    <Skeleton className="aspect-square" />
+                    <div className="p-2.5 space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-16" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                ) : (
+                  <div key={i} className="bg-card rounded-2xl shadow-card p-3 flex items-center gap-3">
+                    <Skeleton className="w-16 h-16 rounded-xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-20" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                    <Skeleton className="w-10 h-10 rounded-full" />
+                  </div>
+                )
+              )}
             </div>
           ) : plants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -186,7 +195,7 @@ export default function MyPlantsPage() {
               <p className="text-sm text-muted-foreground mt-1">Tap + to add your first plant!</p>
             </div>
           ) : view === "grid" ? (
-            <div className="grid grid-cols-2 gap-3 px-4 pb-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-4">
               {plants.map((p) => (
                 <div key={p.id} className="bg-card rounded-2xl shadow-card overflow-hidden animate-fade-in cursor-pointer hover:shadow-elevated transition-shadow">
                   <div className="relative aspect-square">
@@ -213,7 +222,7 @@ export default function MyPlantsPage() {
               ))}
             </div>
           ) : (
-            <div className="px-4 space-y-2 pb-4">
+            <div className="px-4 max-w-3xl mx-auto space-y-2 pb-4">
               {plants.map((p) => (
                 <div key={p.id} className="bg-card rounded-2xl shadow-card p-3 flex items-center gap-3 animate-fade-in cursor-pointer hover:shadow-elevated transition-shadow">
                   <img src={p.image_url || PLANT_FALLBACK} alt={p.nickname} className="w-16 h-16 rounded-xl object-cover" />
@@ -309,6 +318,7 @@ export default function MyPlantsPage() {
             </div>
           ))}
         </div>
+      )}
 
       {/* Add Plant Sheet */}
       <Sheet open={addOpen} onOpenChange={setAddOpen}>

@@ -16,6 +16,7 @@ import PostCard from "@/components/PostCard";
 import { useCreatePost, useFeedPosts } from "@/queries/posts";
 import { usePlants } from "@/queries/plants";
 import { useUpload } from "@/hooks/useUpload";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const postSchema = z.object({
   caption: z.string().min(1, "Caption is required").max(500),
@@ -172,11 +173,22 @@ export default function CommunityPage() {
       </div>
 
       {/* Feed */}
-      <div className="px-4 space-y-4 pb-4">
+      <div className="px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-3">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Loading posts...</p>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden">
+                <Skeleton className="w-full h-64" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <div className="flex items-center gap-2 pt-1">
+                    <Skeleton className="w-8 h-8 rounded-full" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : posts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 gap-2">
