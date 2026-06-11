@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    allowedHosts: ["sflg4w-8080.csb.app"],
     hmr: {
       overlay: false,
     },
@@ -30,9 +31,7 @@ export default defineConfig(({ mode }) => ({
         orientation: "portrait",
         scope: "/",
         start_url: "/",
-        icons: [
-          { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
-        ],
+        icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }],
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],

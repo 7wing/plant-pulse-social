@@ -1,9 +1,11 @@
+import { toast } from "sonner";
 import { Plus, Camera, Search, Grid3X3, List, Droplets, Sun, Scissors, Calendar, BookOpen, Loader2, Leaf, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { usePlants, useAddPlant } from "@/queries/plants";
+import { useAllCareLogs } from "@/queries/careLogs";
 import type { Plant, PlantInsert } from "@/queries/plants";
 import { useUpload } from "@/hooks/useUpload";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -41,6 +43,20 @@ export default function MyPlantsPage() {
   const [view, setView] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState("collection");
   const [addOpen, setAddOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter plants by search query (nickname or species)
+  const filteredPlants = searchQuery.trim()
+    ? plants.filter((p) => {
+        const query = searchQuery.toLowerCase();
+        return (
+          p.nickname.toLowerCase().includes(query) ||
+          (p.species && p.species.toLowerCase().includes(query)) ||
+          (p.scientific_name && p.scientific_name.toLowerCase().includes(query))
+        );
+      })
+    : plants;
+
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
@@ -102,6 +118,8 @@ export default function MyPlantsPage() {
           <input
             type="text"
             placeholder="Search your plants..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-muted rounded-xl pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -126,9 +144,9 @@ export default function MyPlantsPage() {
       {/* Stats bar */}
       <div className="flex gap-2 px-4 py-3">
         {[
-          { label: "Plants", value: plants.length, icon: "🌿" },
-          { label: "Healthy", value: plants.filter((p) => (p.health_percent ?? 100) > 70).length, icon: "💚" },
-          { label: "Need Care", value: plants.filter((p) => isWaterToday(p)).length, icon: "💧" },
+          { label: "Plants", value: filteredPlants.length, icon: "🌿" },
+          { label: "Healthy", value: filteredPlants.filter((p) => (p.health_percent ?? 100) > 70).length, icon: "💚" },
+          { label: "Need Care", value: filteredPlants.filter((p) => isWaterToday(p)).length, icon: "💧" },
         ].map((s) => (
           <div key={s.label} className="flex-1 bg-card rounded-xl p-3 shadow-card text-center">
             <p className="text-lg">{s.icon}</p>
@@ -186,17 +204,25 @@ export default function MyPlantsPage() {
                 )
               )}
             </div>
-          ) : plants.length === 0 ? (
+          ) : filteredPlants.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
               <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                 <Leaf size={32} className="text-muted-foreground" />
               </div>
               <p className="text-base font-semibold">No plants yet</p>
-              <p className="text-sm text-muted-foreground mt-1">Tap + to add your first plant!</p>
+              <p className="text-sm text-muted-foreground mt-1">{searchQuery ? "No plants match your search." : "Tap + to add your first plant!"}</p>
+            </div>
+          ) : searchQuery && filteredPlants.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Search size={32} className="text-muted-foreground" />
+              </div>
+              <p className="text-base font-semibold">No results found</p>
+              <p className="text-sm text-muted-foreground mt-1">Try a different search term</p>
             </div>
           ) : view === "grid" ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 px-4 pb-4">
-              {plants.map((p) => (
+              {filteredPlants.map((p) => (
                 <div key={p.id} className="bg-card rounded-2xl shadow-card overflow-hidden animate-fade-in cursor-pointer hover:shadow-elevated transition-shadow">
                   <div className="relative aspect-square">
                     <img src={p.image_url || PLANT_FALLBACK} alt={p.nickname} className="w-full h-full object-cover" />
@@ -223,7 +249,7 @@ export default function MyPlantsPage() {
             </div>
           ) : (
             <div className="px-4 max-w-3xl mx-auto space-y-2 pb-4">
-              {plants.map((p) => (
+              {filteredPlants.map((p) => (
                 <div key={p.id} className="bg-card rounded-2xl shadow-card p-3 flex items-center gap-3 animate-fade-in cursor-pointer hover:shadow-elevated transition-shadow">
                   <img src={p.image_url || PLANT_FALLBACK} alt={p.nickname} className="w-16 h-16 rounded-xl object-cover" />
                   <div className="flex-1 min-w-0">
@@ -263,51 +289,20 @@ export default function MyPlantsPage() {
       )}
 
       {activeTab === "calendar" && (
-        <div className="px-4 py-6">
-          <div className="bg-card rounded-2xl shadow-card p-4 space-y-4">
-            <h3 className="text-base font-bold">Care Calendar</h3>
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, i) => (
-              <div key={day} className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold ${
-                  i === 1 ? "gradient-leaf text-primary-foreground" : "bg-muted text-muted-foreground"
-                }`}>
-                  {day}
-                </div>
-                <div className="flex-1 flex gap-2">
-                  {i % 2 === 0 && (
-                    <div className="flex items-center gap-1 bg-primary/10 rounded-full px-2 py-1">
-                      <Droplets size={10} className="text-primary" />
-                      <span className="text-xs text-primary font-medium">Water</span>
-                    </div>
-                  )}
-                  {i === 3 && (
-                    <div className="flex items-center gap-1 bg-plant-lime/10 rounded-full px-2 py-1">
-                      <Scissors size={10} className="text-plant-lime" />
-                      <span className="text-xs text-plant-lime font-medium">Prune</span>
-                    </div>
-                  )}
-                  {i === 5 && (
-                    <div className="flex items-center gap-1 bg-plant-warning/10 rounded-full px-2 py-1">
-                      <Sun size={10} className="text-plant-warning" />
-                      <span className="text-xs text-plant-warning font-medium">Rotate</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CalendarTab />
       )}
 
       {activeTab === "journal" && (
         <div className="px-4 py-6 space-y-3">
           {[
-            { date: "Mar 6", plant: "Monty", note: "New leaf unfurling! 🌿 Moved to brighter spot.", img: monsteraImg },
-            { date: "Mar 3", plant: "Rosa", note: "Leaves curling — adjusted humidity. Misting daily now.", img: calatImg },
-            { date: "Feb 28", plant: "Goldie", note: "Started water propagation with 3 cuttings.", img: pothosImg },
+            { date: "Mar 6", plant: "Monty", note: "New leaf unfurling! 🌿 Moved to brighter spot." },
+            { date: "Mar 3", plant: "Rosa", note: "Leaves curling — adjusted humidity. Misting daily now." },
+            { date: "Feb 28", plant: "Goldie", note: "Started water propagation with 3 cuttings." },
           ].map((entry) => (
             <div key={entry.date} className="bg-card rounded-2xl shadow-card p-3 flex gap-3">
-              <img src={entry.img} alt={entry.plant} className="w-16 h-16 rounded-xl object-cover" />
+              <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center">
+                <Leaf size={24} className="text-muted-foreground" />
+              </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-bold">{entry.plant}</p>
@@ -360,10 +355,17 @@ export default function MyPlantsPage() {
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) {
-                        setSelectedImage(file);
-                        setImagePreview(URL.createObjectURL(file));
+                      if (!file) return;
+                      if (!file.type.startsWith("image/")) {
+                        toast.error("Please select a valid image file (JPEG, PNG, etc.)");
+                        return;
                       }
+                      if (file.size > 5 * 1024 * 1024) {
+                        toast.error("Image must be smaller than 5 MB");
+                        return;
+                      }
+                      setSelectedImage(file);
+                      setImagePreview(URL.createObjectURL(file));
                     }}
                   />
                 </label>
@@ -476,6 +478,119 @@ export default function MyPlantsPage() {
           </form>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+// CalendarTab component - fetches and displays real care logs
+function CalendarTab() {
+  const { data: careLogs = [], isLoading } = useAllCareLogs();
+
+  // Group care logs by day of week (0 = Sunday, 1 = Monday, etc.)
+  const getDayIndex = (dateStr: string | null) => {
+    if (!dateStr) return 0;
+    return new Date(dateStr).getDay();
+  };
+
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Group logs by day of week
+  const logsByDay = dayNames.map((_, dayIndex) =>
+    careLogs.filter((log) => getDayIndex(log.logged_at) === dayIndex)
+  );
+
+  // Get icon and color based on care type
+  const getCareBadge = (careType: string) => {
+    const type = careType.toLowerCase();
+    if (type === "water" || type === "watered") {
+      return { icon: Droplets, bgClass: "bg-primary/10", textClass: "text-primary", label: "Water" };
+    }
+    if (type === "fertilize" || type === "fertilized") {
+      return { icon: Sun, bgClass: "bg-plant-warning/10", textClass: "text-plant-warning", label: "Fertilize" };
+    }
+    if (type === "prune" || type === "pruned" || type === "trim") {
+      return { icon: Scissors, bgClass: "bg-plant-lime/10", textClass: "text-plant-lime", label: "Prune" };
+    }
+    if (type === "repot" || type === "repotted") {
+      return { icon: Leaf, bgClass: "bg-plant-success/10", textClass: "text-plant-success", label: "Repot" };
+    }
+    // Default case
+    return { icon: Leaf, bgClass: "bg-muted", textClass: "text-muted-foreground", label: careType };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6">
+        <div className="bg-card rounded-2xl shadow-card p-4 space-y-4">
+          <Skeleton className="h-6 w-32" />
+          {dayNames.map((day) => (
+            <div key={day} className="flex items-center gap-3">
+              <Skeleton className="w-10 h-10 rounded-xl" />
+              <Skeleton className="flex-1 h-8 rounded-full" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-6">
+      <div className="bg-card rounded-2xl shadow-card p-4 space-y-4">
+        <h3 className="text-base font-bold">Care Calendar</h3>
+        {dayNames.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-sm text-muted-foreground">No care logs yet</p>
+          </div>
+        ) : (
+          dayNames.map((day, dayIndex) => {
+            const dayLogs = logsByDay[dayIndex];
+            return (
+              <div key={day} className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold ${
+                  dayLogs.length > 0 ? "gradient-leaf text-primary-foreground" : "bg-muted text-muted-foreground"
+                }`}>
+                  {day}
+                </div>
+                <div className="flex-1 flex gap-2 flex-wrap">
+                  {dayLogs.length === 0 ? (
+                    <span className="text-xs text-muted-foreground italic">No activities</span>
+                  ) : (
+                    dayLogs.slice(0, 3).map((log) => {
+                      const badge = getCareBadge(log.care_type);
+                      const Icon = badge.icon;
+                      return (
+                        <div
+                          key={log.id}
+                          className={`flex items-center gap-1 rounded-full px-2 py-1 ${badge.bgClass}`}
+                        >
+                          <Icon size={10} className={badge.textClass} />
+                          <span className={`text-xs font-medium ${badge.textClass}`}>
+                            {badge.label}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                  {dayLogs.length > 3 && (
+                    <span className="text-xs text-muted-foreground">
+                      +{dayLogs.length - 3} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+        {careLogs.length === 0 && (
+          <div className="text-center py-4 border-t border-border">
+            <Leaf size={24} className="mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Log care activities on your plants to see them here
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

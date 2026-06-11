@@ -261,6 +261,9 @@ export type Database = {
           thumbnail_url: string | null
           title: string
           viewer_count: number | null
+          co_host_setting: string | null
+          moderation_setting: string | null
+          chat_setting: string | null
         }
         Insert: {
           category?: string | null
@@ -273,6 +276,9 @@ export type Database = {
           thumbnail_url?: string | null
           title: string
           viewer_count?: number | null
+          co_host_setting?: string | null
+          moderation_setting?: string | null
+          chat_setting?: string | null
         }
         Update: {
           category?: string | null
@@ -285,6 +291,9 @@ export type Database = {
           thumbnail_url?: string | null
           title?: string
           viewer_count?: number | null
+          co_host_setting?: string | null
+          moderation_setting?: string | null
+          chat_setting?: string | null
         }
         Relationships: [
           {

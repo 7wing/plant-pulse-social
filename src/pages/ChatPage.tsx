@@ -130,12 +130,6 @@ export default function ChatPage() {
             );
           })
         )}
-
-        {/* Sponsored tip */}
-        <div className="bg-card rounded-xl p-3 border border-border">
-          <span className="sponsored-badge text-[10px] mb-1">Sponsored tip</span>
-          <p className="text-xs text-muted-foreground mt-1">Try rooting hormone for faster propagation results. <span className="text-primary font-medium cursor-pointer">Shop now</span></p>
-        </div>
       </div>
 
       {/* Input */}

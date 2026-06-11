@@ -122,7 +122,7 @@ export function useLikePost() {
 
       queryClient.setQueryData(["postLike", postId, user?.id], true);
 
-      queryClient.setQueriesData({ queryKey: ["feed", "posts"] }, (old: any) => {
+      queryClient.setQueriesData({ queryKey: ["feed", "posts"] }, (old: { pages: PostWithAuthor[][] } | undefined) => {
         if (!old) return old;
         return {
           ...old,
@@ -172,7 +172,7 @@ export function useUnlikePost() {
 
       queryClient.setQueryData(["postLike", postId, user?.id], false);
 
-      queryClient.setQueriesData({ queryKey: ["feed", "posts"] }, (old: any) => {
+      queryClient.setQueriesData({ queryKey: ["feed", "posts"] }, (old: { pages: PostWithAuthor[][] } | undefined) => {
         if (!old) return old;
         return {
           ...old,

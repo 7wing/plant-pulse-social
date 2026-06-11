@@ -26,6 +26,25 @@ export function useCareLogs(plantId?: string) {
   });
 }
 
+export function useAllCareLogs() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["careLogs", "all", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("care_logs")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("logged_at", { ascending: false });
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!user?.id,
+  });
+}
+
 export function useAddCareLog() {
   const queryClient = useQueryClient();
   const { user } = useAuth();

@@ -3,23 +3,13 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import SectionHeader from "@/components/SectionHeader";
 import PlantMiniCard from "@/components/PlantMiniCard";
-import ChallengeCard from "@/components/ChallengeCard";
 import LiveCard from "@/components/LiveCard";
 
 import PlantScanSheet from "@/components/PlantScanSheet";
 import { identifyPlant } from "@/lib/plantnet";
 import type { PlantSuggestion } from "@/lib/plantnet";
-import monsteraImg from "@/assets/plant-monstera.jpg";
-import succulentImg from "@/assets/plant-succulent.jpg";
-import fiddleImg from "@/assets/plant-fiddle.jpg";
-import pothosImg from "@/assets/plant-pothos.jpg";
-import snakeImg from "@/assets/plant-snake.jpg";
-import calatImg from "@/assets/plant-calathea.jpg";
-import liveProImg from "@/assets/live-propagation.jpg";
-import liveTourImg from "@/assets/live-tour.jpg";
-
-const AVATAR2 = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face";
-const AVATAR3 = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face";
+import { useLiveStreams } from "@/queries/liveStreams";
+import { usePlants } from "@/queries/plants";
 
 const categories = ["All", "Indoor", "Succulents", "Rare", "Propagation", "Gardening", "Tropical", "Cacti"];
 
@@ -30,6 +20,10 @@ export default function ExplorePage() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanResults, setScanResults] = useState<PlantSuggestion[] | null>(null);
   const [scanOpen, setScanOpen] = useState(false);
+
+  // Query hooks for real data
+  const { data: liveStreams = [] } = useLiveStreams();
+  const { data: plants = [] } = usePlants();
 
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -126,80 +120,50 @@ export default function ExplorePage() {
 
       {/* Live Streams */}
       <SectionHeader title="🔴 Live Now" actionPath="/live" />
-      <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible lg:grid-cols-4">
-        <LiveCard image={liveProImg} title="Rare Aroid Unboxing!" host="RarePlant_Jay" hostAvatar={AVATAR2} viewers={891} />
-        <LiveCard image={liveTourImg} title="Greenhouse Tour 🌿" host="GreenThumb_Amy" hostAvatar={AVATAR3} viewers={456} />
-      </div>
+      {liveStreams.length === 0 ? (
+        <div className="flex gap-3 px-4 pb-2">
+          <p className="text-sm text-muted-foreground">No live streams yet. Check back soon!</p>
+        </div>
+      ) : (
+        <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible lg:grid-cols-4">
+          {liveStreams.slice(0, 6).map((stream) => (
+            <LiveCard
+              key={stream.id}
+              image={stream.thumbnail_url ?? "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=300&fit=crop"}
+              title={stream.title}
+              host={stream.profiles?.username ?? stream.profiles?.display_name ?? "Host"}
+              hostAvatar={stream.profiles?.avatar_url ?? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"}
+              viewers={stream.viewer_count ?? 0}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Plant Directory */}
       <SectionHeader title="Popular Plants 🌿" actionPath="/my-plants" />
-      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-        <PlantMiniCard image={monsteraImg} name="Monstera" species="M. deliciosa" waterDays={3} healthPercent={92} />
-        <PlantMiniCard image={pothosImg} name="Pothos" species="E. aureum" waterDays={5} healthPercent={88} />
-        <PlantMiniCard image={snakeImg} name="Snake Plant" species="S. trifasciata" waterDays={10} healthPercent={96} />
-        <PlantMiniCard image={calatImg} name="Calathea" species="C. ornata" waterDays={2} healthPercent={74} />
-        <PlantMiniCard image={succulentImg} name="Echeveria" species="E. elegans" waterDays={7} healthPercent={95} />
-        <PlantMiniCard image={fiddleImg} name="Bird of Paradise" species="S. reginae" waterDays={4} healthPercent={85} />
-      </div>
-
-      {/* Communities */}
-      <SectionHeader title="Top Communities" actionPath="/community" />
-      <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible lg:grid-cols-4">
-        {[{"name": "Indoor Jungle", members: "12.4k", img: liveTourImg },
-          { name: "Rare Plant Collectors", members: "8.7k", img: calatImg },
-          { name: "Succulent Love", members: "15.2k", img: succulentImg },
-        ].map((g) => (
-          <div key={g.name} className="min-w-[160px] md:min-w-0 bg-card rounded-2xl shadow-card overflow-hidden">
-            <img src={g.img} alt={g.name} className="w-full h-20 object-cover" />
-            <div className="p-2.5">
-              <p className="text-sm font-bold truncate">{g.name}</p>
-              <p className="text-xs text-muted-foreground">{g.members} members</p>
-              <button className="mt-2 w-full py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold">
-                Join
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {plants.length === 0 ? (
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+          <p className="text-sm text-muted-foreground col-span-full py-8 text-center">No plants yet. Add your first plant!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+          {plants.slice(0, 10).map((plant) => (
+            <PlantMiniCard
+              key={plant.id}
+              image={plant.image_url ?? "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=400&fit=crop"}
+              name={plant.nickname ?? plant.name}
+              species={plant.species ?? ""}
+              waterDays={plant.water_frequency_days ?? 7}
+              healthPercent={plant.health_score ?? 80}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Challenges */}
       <SectionHeader title="Challenges 🏆" />
-      <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible lg:grid-cols-4">
-        <ChallengeCard
-          title="Spring Growth Spurt"
-          description="Document your plants' spring growth over 30 days!"
-          participants={2100}
-          daysLeft={22}
-          progress={27}
-          image={fiddleImg}
-        />
-        <ChallengeCard
-          title="Propagation Station"
-          description="Share your best propagation setups and results"
-          participants={890}
-          daysLeft={12}
-          progress={60}
-          image={liveProImg}
-        />
-      </div>
-
-      {/* Sponsored Brands */}
-      <SectionHeader title="Featured Brands" />
-      <div className="flex gap-3 px-4 overflow-x-auto pb-4 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible lg:grid-cols-4">
-        {[
-          { name: "PlantVitality", desc: "Premium organic fertilizers", discount: "20% OFF" },
-          { name: "TerraCotta Co.", desc: "Handmade ceramic pots", discount: "Free shipping" },
-          { name: "GrowLight Pro", desc: "Full spectrum LED lights", discount: "15% OFF" },
-        ].map((brand) => (
-          <div key={brand.name} className="min-w-[200px] md:min-w-0 bg-card rounded-2xl shadow-card p-3 border border-border">
-            <span className="sponsored-badge mb-2">Sponsored</span>
-            <p className="text-sm font-bold mt-2">{brand.name}</p>
-            <p className="text-xs text-muted-foreground">{brand.desc}</p>
-            <div className="mt-2 px-2 py-1 rounded-md bg-plant-lime/10 inline-block">
-              <span className="text-xs font-bold text-plant-lime">{brand.discount}</span>
-            </div>
-          </div>
-        ))}
+      <div className="flex gap-3 px-4 pb-4">
+        <p className="text-sm text-muted-foreground">Challenges coming soon! Join the community to participate.</p>
       </div>
     </div>
   );

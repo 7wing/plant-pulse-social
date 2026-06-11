@@ -1,5 +1,6 @@
 import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Grid3X3, Users, Play, Moon, Sun as SunIcon, Monitor, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -7,7 +8,10 @@ import { useTheme } from "@/hooks/useTheme";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile, useUpdateProfile } from "@/queries/profile";
-import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingCount } from "@/queries/follows";
+import { useProfilePlants } from "@/queries/plants";
+import { useFeedPosts } from "@/queries/posts";
+import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingCount, useFollows } from "@/queries/follows";
+import { useLiveStreams } from "@/queries/liveStreams";
 import { useCreateConversation } from "@/queries/conversations";
 import {
   Dialog,
@@ -22,20 +26,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-
-import monsteraImg from "@/assets/plant-monstera.jpg";
-import succulentImg from "@/assets/plant-succulent.jpg";
-import fiddleImg from "@/assets/plant-fiddle.jpg";
-import pothosImg from "@/assets/plant-pothos.jpg";
-import snakeImg from "@/assets/plant-snake.jpg";
-import calatImg from "@/assets/plant-calathea.jpg";
-import liveTourImg from "@/assets/live-tour.jpg";
-import liveProImg from "@/assets/live-propagation.jpg";
+import { supabase } from "@/lib/supabase";
 
 const AVATAR = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face";
-const AVATAR2 = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face";
-const AVATAR3 = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face";
-const AVATAR4 = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face";
 
 const profileTabs = [
   { id: "plants", label: "Plants", icon: Grid3X3 },
@@ -44,7 +37,7 @@ const profileTabs = [
   { id: "lives", label: "Lives", icon: Play },
 ];
 
-const badges = [
+const defaultBadges = [
   { name: "Master Propagator", emoji: "🌱" },
   { name: "Plant Parent 100", emoji: "🏆" },
   { name: "Live Streamer", emoji: "📹" },
@@ -114,6 +107,24 @@ export default function ProfilePage() {
   const plantsCount = profile?.plants_count ?? 0;
   const { data: followersCount = 0 } = useFollowerCount(profile?.id);
   const { data: followingCount = 0 } = useFollowingCount(profile?.id);
+
+  // Plants tab — real data from useProfilePlants
+  const { data: profilePlants = [], isLoading: plantsLoading } = useProfilePlants(profile?.id);
+
+  // Posts tab — real data from useFeedPosts, filtered to profile owner
+  const { data: postsData, isLoading: postsLoading } = useFeedPosts(false);
+  const profilePosts = useMemo(() => {
+    if (!postsData) return [];
+    const allPosts = postsData.pages.flat();
+    return currentUser ? allPosts.filter((p) => p.author_id === currentUser.id) : allPosts;
+  }, [postsData, currentUser]);
+
+  // Connections tab — real data from useFollows
+  const { data: followingIds = new Set<string>() } = useFollows();
+  const followingIdsArr = useMemo(() => Array.from(followingIds), [followingIds]);
+
+  // Lives tab — real data from useLiveStreams
+  const { data: liveStreams = [], isLoading: streamsLoading } = useLiveStreams();
 
   return (
     <div className="pb-24 min-h-screen">
@@ -293,7 +304,7 @@ export default function ProfilePage() {
           <span className="text-xs font-bold">Badges Earned</span>
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          {badges.map((b) => (
+          {defaultBadges.map((b) => (
             <div key={b.name} className="flex items-center gap-1.5 bg-card rounded-full px-3 py-1.5 shadow-card min-w-fit border border-border">
               <span className="text-sm">{b.emoji}</span>
               <span className="text-xs font-medium whitespace-nowrap">{b.name}</span>
@@ -323,68 +334,100 @@ export default function ProfilePage() {
       {/* Tab content */}
       {activeTab === "plants" && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 px-4">
-          {[monsteraImg, pothosImg, snakeImg, calatImg, succulentImg, fiddleImg, liveTourImg, liveProImg, monsteraImg].map((img, i) => (
-            <div key={i} className="aspect-square rounded-lg overflow-hidden">
-              <img src={img} alt={`Plant ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+          {plantsLoading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-lg" />
+            ))
+          ) : profilePlants.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
+              No plants yet. Add your first plant!
             </div>
-          ))}
+          ) : (
+            profilePlants.map((plant) => (
+              <div key={plant.id} className="aspect-square rounded-lg overflow-hidden">
+                <img
+                  src={plant.photo_url || AVATAR}
+                  alt={plant.nickname || plant.species || "Plant"}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+            ))
+          )}
         </div>
       )}
 
       {activeTab === "posts" && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 px-4">
-          {[fiddleImg, pothosImg, monsteraImg, succulentImg, calatImg, snakeImg].map((img, i) => (
-            <div key={i} className="aspect-square rounded-lg overflow-hidden relative">
-              <img src={img} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
-              <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
-                <MessageCircle size={10} className="text-primary-foreground" />
-                <span className="text-[10px] text-primary-foreground font-medium">{Math.floor(Math.random() * 100) + 10}</span>
-              </div>
+          {postsLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="aspect-square rounded-lg" />
+            ))
+          ) : profilePosts.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
+              No posts yet. Share your first plant update!
             </div>
-          ))}
+          ) : (
+            profilePosts.map((post) => (
+              <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
+                <img
+                  src={post.image_url || AVATAR}
+                  alt={post.content || "Post"}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
+                  <MessageCircle size={10} className="text-primary-foreground" />
+                  <span className="text-[10px] text-primary-foreground font-medium">
+                    {post.comments_count ?? 0}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
       {activeTab === "connections" && (
-        <div className="grid grid-cols-4 gap-3 px-4">
-          {[
-            { name: "Mike", avatar: AVATAR2 },
-            { name: "Lisa", avatar: AVATAR3 },
-            { name: "Carlos", avatar: AVATAR4 },
-            { name: "Emma", avatar: AVATAR },
-            { name: "Jay", avatar: AVATAR2 },
-            { name: "Amy", avatar: AVATAR3 },
-            { name: "Tom", avatar: AVATAR4 },
-            { name: "Nina", avatar: AVATAR },
-          ].map((c) => (
-            <div key={c.name} className="flex flex-col items-center gap-1.5">
-              <img src={c.avatar} alt={c.name} className="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20" />
-              <span className="text-xs font-medium">{c.name}</span>
-            </div>
-          ))}
-        </div>
+        <FollowingList followingIds={followingIdsArr} />
       )}
 
       {activeTab === "lives" && (
         <div className="px-4 space-y-3">
-          {[
-            { title: "Monstera Propagation Demo", views: "1.2k", date: "Mar 5", img: liveProImg },
-            { title: "My Indoor Jungle Tour", views: "856", date: "Feb 28", img: liveTourImg },
-            { title: "Repotting Session", views: "445", date: "Feb 20", img: fiddleImg },
-          ].map((l) => (
-            <div key={l.title} className="bg-card rounded-2xl shadow-card overflow-hidden flex">
-              <div className="relative w-28 h-20">
-                <img src={l.img} alt={l.title} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 flex items-center justify-center bg-foreground/20">
-                  <Play size={20} className="text-primary-foreground" fill="white" />
+          {streamsLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden flex">
+                <Skeleton className="w-28 h-20" />
+                <div className="flex-1 p-2.5 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
                 </div>
               </div>
-              <div className="flex-1 p-2.5">
-                <p className="text-sm font-bold truncate">{l.title}</p>
-                <p className="text-xs text-muted-foreground">{l.date} • {l.views} views</p>
-              </div>
+            ))
+          ) : liveStreams.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              No live streams right now.
             </div>
-          ))}
+          ) : (
+            liveStreams.map((stream) => (
+              <div key={stream.id} className="bg-card rounded-2xl shadow-card overflow-hidden flex">
+                <div className="relative w-28 h-20">
+                  <img
+                    src={stream.thumbnail_url || AVATAR}
+                    alt={stream.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-foreground/20">
+                    <Play size={20} className="text-primary-foreground" fill="white" />
+                  </div>
+                </div>
+                <div className="flex-1 p-2.5 flex flex-col justify-center">
+                  <p className="text-sm font-bold truncate">{stream.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCount(stream.viewer_count ?? 0)} watching
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
 
@@ -452,6 +495,61 @@ export default function ProfilePage() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Separate component to fetch and display followed user profiles
+function FollowingList({ followingIds }: { followingIds: string[] }) {
+  const { data: profileData, isLoading } = useQuery({
+    queryKey: ["followedProfiles", followingIds],
+    queryFn: async () => {
+      if (followingIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .in("id", followingIds);
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: followingIds.length > 0,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-4 gap-3 px-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5">
+            <Skeleton className="w-14 h-14 rounded-full" />
+            <Skeleton className="h-3 w-12" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!profileData || profileData.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground text-sm px-4">
+        Not following anyone yet. Discover plant lovers to follow!
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-4 gap-3 px-4">
+      {profileData.map((user) => (
+        <div key={user.id} className="flex flex-col items-center gap-1.5">
+          <img
+            src={user.avatar_url || AVATAR}
+            alt={user.display_name || user.username || "User"}
+            className="w-14 h-14 rounded-full object-cover ring-2 ring-primary/20"
+          />
+          <span className="text-xs font-medium truncate max-w-[56px]">
+            {user.display_name || user.username}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }

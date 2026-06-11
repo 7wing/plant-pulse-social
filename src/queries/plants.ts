@@ -26,6 +26,23 @@ export function usePlants() {
   });
 }
 
+export function useProfilePlants(profileId?: string) {
+  return useQuery({
+    queryKey: ["profilePlants", profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("plants")
+        .select("*")
+        .eq("owner_id", profileId!)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profileId,
+  });
+}
+
 export function usePlant(id?: string) {
   return useQuery({
     queryKey: ["plant", id],

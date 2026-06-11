@@ -6,24 +6,12 @@ import { useRemoteParticipants, VideoTrack } from "@livekit/components-react";
 import { Track } from "livekit-client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { useStream, useUpdateViewerCount } from "@/queries/liveStreams";
+import { useStream, useUpdateViewerCount, useStreamChat, type StreamChatMessage } from "@/queries/liveStreams";
 import { supabase } from "@/lib/supabase";
 
 import liveProImg from "@/assets/live-propagation.jpg";
 
-const AVATAR3 = "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face";
-const AVATAR2 = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face";
-const AVATAR4 = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face";
-
-const chatMessages = [
-  { user: "PlantDad", text: "Amazing technique! 🌱", avatar: AVATAR4 },
-  { user: "GreenThumb", text: "What soil mix do you use?", avatar: AVATAR2 },
-  { user: "PlantNewbie", text: "How long until roots show?", avatar: AVATAR3 },
-  { user: "MonsteraFan", text: "I tried this last week, it worked!", avatar: AVATAR4 },
-  { user: "UrbanJungle", text: "Can you show the node closer?", avatar: AVATAR2 },
-];
-
-const reactions = ["❤️", "🌿", "🔥", "😍", "👏", "🌱"];
+const AVAILABLE_REACTIONS = ["❤️", "🌿", "🔥", "😍", "👏", "🌱"];
 
 // Fallback avatar used when host has no avatar
 function HostAvatar({ src, alt }: { src: string | null | undefined; alt: string }) {
@@ -67,6 +55,7 @@ export default function LiveViewerPage() {
 
   const { data: stream, isLoading } = useStream(streamId);
   const updateViewerCount = useUpdateViewerCount();
+  const { messages: chatMessages, sendMessage } = useStreamChat(streamId, !!stream);
 
   const [token, setToken] = useState<string | null>(null);
   const [wsUrl, setWsUrl] = useState<string | null>(null);
@@ -300,12 +289,24 @@ export default function LiveViewerPage() {
       </div>
 
       {/* Chat overlay */}
-      <ChatOverlay />
+      <ChatOverlay
+        messages={chatMessages}
+        onSendMessage={sendMessage}
+        availableReactions={AVAILABLE_REACTIONS}
+      />
     </div>
   );
 }
 
 // ---- Sub-components preserving existing UI ----
+
+// Module-level ref to avoid window pollution while still wiring
+// FloatingReactions and ChatOverlay together.
+let reactionRef: ((emoji: string) => void) | null = null;
+
+const addReactionStatic = (emoji: string) => {
+  reactionRef?.(emoji);
+};
 
 function FloatingReactions() {
   const [floatingReactions, setFloatingReactions] = useState<
@@ -321,11 +322,9 @@ function FloatingReactions() {
     );
   };
 
-  // Expose via window for external triggering
   useEffect(() => {
-    const w = window as unknown as { __addLiveReaction?: (e: string) => void };
-    w.__addLiveReaction = addReaction;
-    return () => { delete w.__addLiveReaction; };
+    reactionRef = addReaction;
+    return () => { reactionRef = null; };
   }, []);
 
   return (
@@ -363,42 +362,66 @@ function SideActionButton({
   );
 }
 
-function ChatOverlay() {
+function ChatOverlay({
+  messages,
+  onSendMessage,
+  availableReactions,
+}: {
+  messages: StreamChatMessage[];
+  onSendMessage: (text: string) => void;
+  availableReactions: string[];
+}) {
   const [chatMsg, setChatMsg] = useState("");
   const [showReactions, setShowReactions] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const addReactionStatic = (emoji: string) => {
-    const fn = (window as unknown as { __addLiveReaction?: (e: string) => void }).__addLiveReaction;
-    if (fn) fn(emoji);
+  const handleSend = () => {
+    if (chatMsg.trim()) {
+      onSendMessage(chatMsg);
+      setChatMsg("");
+    }
   };
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   return (
     <div className="absolute bottom-0 left-0 right-16 z-10 px-4 pb-4">
       {/* Chat messages */}
       <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
-        {chatMessages.map((m, i) => (
+        {messages.map((m, i) => (
           <div
-            key={i}
+            key={m.id}
             className="flex items-start gap-2 animate-fade-in"
-            style={{ animationDelay: `${i * 0.1}s` }}
           >
-            <img
-              src={m.avatar}
-              alt={m.user}
-              className="w-6 h-6 rounded-full object-cover"
-            />
+            {m.avatar_url ? (
+              <img
+                src={m.avatar_url}
+                alt={m.username}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-plant-live flex items-center justify-center text-[10px] font-bold text-white">
+                {(m.display_name || m.username).charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="bg-foreground/20 backdrop-blur-sm rounded-xl rounded-bl-md px-2.5 py-1.5 max-w-[80%]">
-              <span className="text-[10px] font-bold text-primary">{m.user}</span>
+              <span className="text-[10px] font-bold text-primary">
+                {m.display_name || m.username}
+              </span>
               <p className="text-xs text-primary-foreground">{m.text}</p>
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Reaction bar */}
       {showReactions && (
         <div className="flex gap-2 mb-2 animate-scale-in">
-          {reactions.map((emoji) => (
+          {availableReactions.map((emoji) => (
             <button
               key={emoji}
               onClick={() => {
@@ -426,10 +449,15 @@ function ChatOverlay() {
             type="text"
             value={chatMsg}
             onChange={(e) => setChatMsg(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Say something..."
             className="w-full bg-foreground/20 backdrop-blur-sm rounded-full pl-4 pr-10 py-2.5 text-sm text-primary-foreground placeholder:text-primary-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
-          <button className="absolute right-2 top-1/2 -translate-y-1/2" aria-label="Send">
+          <button
+            onClick={handleSend}
+            className="absolute right-2 top-1/2 -translate-y-1/2"
+            aria-label="Send"
+          >
             <Send size={16} className="text-primary-foreground" />
           </button>
         </div>

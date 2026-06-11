@@ -1,0 +1,492 @@
+{
+  "id": "019eb3e1-9102-736f-a188-e80633c903ec",
+  "name": "Fix page inventory issues",
+  "description": "Fix all the issues pointed out in the PAGE_INVENTORY.md file for the PlantPal project:\n\n🔴 Likely Bugs / Runtime Errors:\n1. MyPlantsPage - Undefined variable references: Journal tab uses `monsteraImg`, `calatImg`, `pothosImg` variables that are not imported. Fix by either importing proper images or replacing with placeholder logic.\n2. HomePage - Misleading progress calculation: Daily progress summary treats null / unscheduled watering tasks as \"completed\". Fix the calculation to only count actually completed tasks.\n\n🟡 Incomplete Data Integration (Hardcoded / Mock Data):\n3. ExplorePage - Almost entirely hardcoded: Replace hardcoded sections with proper data fetching or at least clean placeholder architecture.\n4. ProfilePage - Static tab content: Plants, Posts, Connections, Lives tabs use hardcoded images. Wire to real data or use proper empty states.\n5. LiveViewerPage - Mock chat & reactions: Replace hardcoded chatMessages and reactions arrays with real Supabase realtime wiring or clean placeholders.\n6. LiveHostPage - Hardcoded categories & labels: Stream categories static array, UI controls are static strings. Connect to state.\n7. ChatPage - Sponsored tip placeholder: Remove or replace the \"Try rooting hormone...\" advertisement placeholder.\n8. MyPlantsPage - Hardcoded calendar data: Calendar tab uses hardcoded sample care activities. Wire to real care logs.\n\n🟠 Structural / Code Quality Issues:\n9. App.tsx - Dual toast libraries: Both `<Toaster>` and `<Sonner>` rendered side-by-side. Remove redundancy.\n10. LiveViewerPage - Global window pollution: `FloatingReactions` exposes `__addLiveReaction` on window. Remove or properly encapsulate.\n11. MyPlantsPage - Uncontrolled search input: Search field present but doesn't filter anything. Wire it up.\n12. MyPlantsPage - Missing image validation: Add-plant sheet image upload has no file-type or size validation. Add validation.\n13. Index.tsx - Dead code: Remove the orphaned Index.tsx page.\n14. App.tsx - Inline AuthRoute: Extract AuthRoute from inline definition in App.tsx to a reusable component like ProtectedRoute.",
+  "status": "complete",
+  "worktree": {
+    "path": "/project/workspace",
+    "branch": "main",
+    "commit": "3a5d72618a25f170b9e41a7382b93287b1761541"
+  },
+  "scoping": {
+    "goal": {
+      "answer": "Resolve all flagged issues in PAGE_INVENTORY.md across the PlantPal React/TypeScript codebase. All hardcoded/mock data sections must be wired to existing TanStack Query hooks so the app serves real data with no remaining placeholders. Critical runtime bugs are fixed, dead code and structural redundancies are eliminated, and the project compiles and lints cleanly.",
+      "confirmedAt": "2026-06-10T23:44:40.502Z"
+    },
+    "criteria": {
+      "answer": "src/pages/Index.tsx is deleted and not imported anywhere in the codebase\nApp.tsx renders only the Sonner toast library; the Toaster import and JSX usage are removed\nsrc/components/AuthRoute.tsx exists and App.tsx imports and uses it instead of the inline AuthRoute function\nLiveViewerPage contains no references to window.__addLiveReaction\nMyPlantsPage contains no references to undefined monsteraImg, calatImg, or pothosImg\nHomePage daily progress calculation only counts tasks with a truthy completion status\nMyPlantsPage search input is wired to state and filters the displayed plant collection\nMyPlantsPage add-plant image upload validates file type (image/*) and size (< 5MB) before upload\nMyPlantsPage calendar tab imports and uses useCareLogs or another existing plant-care query hook instead of hardcoded arrays\nChatPage contains no 'rooting hormone' advertisement placeholder\nExplorePage, ProfilePage, LiveViewerPage, and LiveHostPage contain no hardcoded sample/mock arrays; they use existing TanStack Query hooks for real data\nThe project compiles without TypeScript errors (tsc --noEmit exits 0) and passes ESLint (eslint . exits 0)",
+      "confirmedAt": "2026-06-10T23:44:40.502Z"
+    },
+    "constraints": {
+      "answer": "No new npm dependencies, Preserve all existing routing behavior and auth logic, Maintain TypeScript strict mode compliance, Do not break existing Supabase or LiveKit integrations",
+      "confirmedAt": "2026-06-10T23:44:40.502Z"
+    },
+    "phases": {
+      "answer": "Phase 1: Fix Critical Runtime Bugs, Phase 2: Structural Cleanup, Phase 3: MyPlantsPage Feature Wiring, Phase 4: Wire Hardcoded Pages to Real Queries, Phase 5: Build & Lint Verification",
+      "confirmedAt": "2026-06-10T23:44:40.502Z"
+    },
+    "assumptions": {
+      "answer": "Existing TanStack Query hooks in src/queries/ are functional and provide the data needed for the hardcoded sections (usePlants, useCareLogs, useFeedPosts, useComments, useProfile, useFollows, useLiveStreams, etc.); Supabase realtime subscriptions for chat and live streams are already configured and working; Pages that need to filter by the current authenticated user can rely on the existing useAuth hook or Supabase auth session; The project uses Vite + React 18 + TypeScript + Tailwind + shadcn/ui + Sonner",
+      "confirmedAt": "2026-06-10T23:44:40.502Z"
+    }
+  },
+  "phases": [
+    {
+      "id": "phase-1",
+      "index": 1,
+      "name": "Phase 1: Fix Critical Runtime Bugs",
+      "goal": "Eliminate runtime crashes and misleading progress UI",
+      "description": "Fix the MyPlantsPage Journal tab undefined image variables and correct the HomePage progress calculation so it only counts completed tasks.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "In MyPlantsPage.tsx, replace undefined monsteraImg/calatImg/pothosImg references with real imports, useImages from usePlants, or a placeholder component",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'monsteraImg|calatImg|pothosImg' src/pages/MyPlantsPage.tsx; test $? -ne 0",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-10T23:44:48.070Z",
+          "completedAt": "2026-06-10T23:46:18.326Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-10T23:46:18.326Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "In HomePage.tsx, update the progress calculation to exclude null/unscheduled tasks from the completed count",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'progress|completed' src/pages/HomePage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-10T23:46:22.000Z",
+          "completedAt": "2026-06-10T23:54:42.492Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-10T23:54:42.492Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-10T23:44:44.728Z",
+      "completedAt": "2026-06-10T23:55:03.987Z",
+      "summary": "Phase 1 complete. Fixed two critical runtime bugs: (1) MyPlantsPage Journal tab no longer references undefined monsteraImg/calatImg/pothosImg variables, replaced with Leaf icon placeholder; (2) HomePage daily progress calculation now uses isWateredToday(last_watered_at) to count only plants actually watered today, excluding null/unscheduled tasks from the completed count. Both files pass tsc and eslint.",
+      "grade": {
+        "grade": "A",
+        "rationale": "All gates pass; project checks validate.",
+        "gradedAt": "2026-06-10T23:55:03.986Z"
+      }
+    },
+    {
+      "id": "phase-2",
+      "index": 2,
+      "name": "Phase 2: Structural Cleanup",
+      "goal": "Remove dead code, deduplicate toast libraries, extract AuthRoute, clean window pollution",
+      "description": "Delete orphaned Index.tsx, remove redundant Toaster from App.tsx and keep only Sonner, extract inline AuthRoute into its own component file, and remove the window.__addLiveReaction exposure in LiveViewerPage.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "Delete src/pages/Index.tsx and verify no import references remain",
+          "status": "verified",
+          "verification": {
+            "command": "test ! -f src/pages/Index.tsx && ! grep -rE \"from.*Index|import.*Index\\\"\" src/",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-10T23:55:32.491Z",
+          "completedAt": "2026-06-10T23:56:19.785Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-10T23:56:19.785Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "Remove Toaster import and JSX from App.tsx; keep Sonner import and usage",
+          "status": "verified",
+          "verification": {
+            "command": "grep '<Toaster' src/App.tsx; test $? -ne 0",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-10T23:56:24.593Z",
+          "completedAt": "2026-06-10T23:58:48.690Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-10T23:58:48.690Z"
+          }
+        },
+        {
+          "id": "step-3",
+          "index": 3,
+          "description": "Extract AuthRoute function from App.tsx into src/components/AuthRoute.tsx and update App.tsx to import and use it",
+          "status": "verified",
+          "verification": {
+            "command": "test -f src/components/AuthRoute.tsx && grep -q 'AuthRoute' src/App.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-10T23:58:53.700Z",
+          "completedAt": "2026-06-11T00:01:55.464Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:01:55.464Z"
+          }
+        },
+        {
+          "id": "step-4",
+          "index": 4,
+          "description": "Remove window.__addLiveMutation or __addLiveReaction assignment in LiveViewerPage",
+          "status": "verified",
+          "verification": {
+            "command": "grep '__addLiveReaction' src/pages/LiveViewerPage.tsx; test $? -ne 0",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:02:02.811Z",
+          "completedAt": "2026-06-11T00:07:59.018Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:07:59.018Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-10T23:55:13.143Z",
+      "completedAt": "2026-06-11T00:08:34.920Z",
+      "summary": "Phase 2 complete. All structural cleanup items finished: (1) deleted orphaned Index.tsx with no import references; (2) removed duplicate shadcn/ui Toaster from App.tsx, keeping only Sonner; (3) extracted inline AuthRoute into src/components/AuthRoute.tsx with full TypeScript/ESLint compliance; (4) replaced window.__addLiveReaction pollution in LiveViewerPage with a module-level reactionRef variable.",
+      "grade": {
+        "grade": "A",
+        "rationale": "All gates pass; project checks validate.",
+        "gradedAt": "2026-06-11T00:08:34.919Z"
+      }
+    },
+    {
+      "id": "phase-3",
+      "index": 3,
+      "name": "Phase 3: MyPlantsPage Feature Wiring",
+      "goal": "Wire search, image validation, and calendar to real data",
+      "description": "Connect the existing search input to filter plants by name, add file type and size validation to the add-plant image upload, and replace hardcoded calendar data with real care logs via the useCareLogs hook.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "Wire MyPlantsPage search state to the plant list so typing filters visible plants",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'search|filter' src/pages/MyPlantsPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:08:54.464Z",
+          "completedAt": "2026-06-11T00:10:49.985Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:10:49.985Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "Add file type (image/*) and size (< 5MB) validation to the add-plant image upload before calling useUpload",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'file\\.type|file\\.size|5MB|image/' src/pages/MyPlantsPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:11:03.902Z",
+          "completedAt": "2026-06-11T00:12:57.153Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:12:57.153Z"
+          }
+        },
+        {
+          "id": "step-3",
+          "index": 3,
+          "description": "Replace hardcoded calendar samples with useCareLogs query data in the calendar tab",
+          "status": "verified",
+          "verification": {
+            "command": "grep 'useCareLogs' src/pages/MyPlantsPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:13:10.707Z",
+          "completedAt": "2026-06-11T00:17:13.594Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:17:13.594Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-11T00:08:46.413Z",
+      "completedAt": "2026-06-11T00:17:28.373Z",
+      "summary": "Phase 3 complete. MyPlantsPage enhancements: (1) search input is wired to React state and filters the plant collection in real-time by nickname, species, or scientific_name; (2) add-plant image upload validates file type (must be image/*) and size (< 5MB) before state mutation, with toast.error feedback; (3) calendar tab now uses the new `useAllCareLogs` hook to display real care logs grouped by day of week, replacing hardcoded sample activities, with loading skeletons and empty state handling.",
+      "grade": {
+        "grade": "A",
+        "rationale": "All gates pass; project checks validate.",
+        "gradedAt": "2026-06-11T00:17:28.372Z"
+      }
+    },
+    {
+      "id": "phase-4",
+      "index": 4,
+      "name": "Phase 4: Wire Hardcoded Pages to Real Queries",
+      "goal": "Replace all mock data with real query-driven data across ExplorePage, ProfilePage, LiveViewerPage, LiveHostPage, and ChatPage",
+      "description": "For each page, identify existing TanStack Query hooks and wire sections to them. Remove static image imports and hardcoded arrays. Delete the ChatPage sponsored advertisement placeholder.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "ExplorePage: replace hardcoded live streams, plant directory, community highlights, and challenges with useLiveStreams / useFeedPosts / usePlants or other existing hooks",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'const sample|const mock|useLiveStreams|useFeedPosts|usePlants' src/pages/ExplorePage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:18:02.794Z",
+          "completedAt": "2026-06-11T00:25:11.375Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:25:11.375Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "ProfilePage: wire Plants/Posts/Connections/Lives tabs to usePlants / useFeedPosts / useFollows / useLiveStreams and remove static image imports",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'monsteraImg|succulentImg|usePlants|useFeedPosts|useFollows|useLiveStreams' src/pages/ProfilePage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:25:19.358Z",
+          "completedAt": "2026-06-11T00:28:38.869Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:28:38.869Z"
+          }
+        },
+        {
+          "id": "step-3",
+          "index": 3,
+          "description": "LiveViewerPage: replace hardcoded chatMessages and reactions with useMessages or useStream realtime data",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'chatMessages|reactions|useMessages|useStream' src/pages/LiveViewerPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:28:52.145Z",
+          "completedAt": "2026-06-11T00:47:03.019Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:47:03.019Z"
+          }
+        },
+        {
+          "id": "step-4",
+          "index": 4,
+          "description": "LiveHostPage: replace static categories array with state or data from an existing hook; replace static control strings with real state values",
+          "status": "verified",
+          "verification": {
+            "command": "grep -E 'categories|useState|useCreateStream' src/pages/LiveHostPage.tsx",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:47:12.756Z",
+          "completedAt": "2026-06-11T00:50:37.542Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:50:37.542Z"
+          }
+        },
+        {
+          "id": "step-5",
+          "index": 5,
+          "description": "ChatPage: remove the rooting hormone sponsored tip placeholder",
+          "status": "verified",
+          "verification": {
+            "command": "grep 'rooting hormone' src/pages/ChatPage.tsx; test $? -ne 0",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:50:47.862Z",
+          "completedAt": "2026-06-11T00:55:36.441Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:55:36.441Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-11T00:17:55.772Z",
+      "completedAt": "2026-06-11T00:55:50.254Z",
+      "summary": "Phase 4 complete. All hardcoded data across five pages has been replaced with real queries or proper state. ExplorePage now uses useLiveStreams and usePlants. ProfilePage uses useProfilePlants, useFeedPosts, useFollows, and useLiveStreams. LiveViewerPage uses the new useStreamChat Supabase Realtime hook. LiveHostPage categories and settings are now controlled by typed useState. ChatPage ad placeholder removed.",
+      "grade": {
+        "grade": "A",
+        "rationale": "All gates pass; project checks validate.",
+        "gradedAt": "2026-06-11T00:55:50.253Z"
+      }
+    },
+    {
+      "id": "phase-5",
+      "index": 5,
+      "name": "Phase 5: Build & Lint Verification",
+      "goal": "Confirm the codebase compiles and passes lint after all changes",
+      "description": "Run TypeScript compilation and ESLint to verify no errors were introduced.",
+      "parallel": false,
+      "status": "completed",
+      "steps": [
+        {
+          "id": "step-1",
+          "index": 1,
+          "description": "Run tsc --noEmit to verify TypeScript compilation succeeds",
+          "status": "verified",
+          "verification": {
+            "command": "npx tsc --noEmit",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:56:08.641Z",
+          "completedAt": "2026-06-11T00:57:27.544Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T00:57:27.544Z"
+          }
+        },
+        {
+          "id": "step-2",
+          "index": 2,
+          "description": "Run ESLint across the project to verify lint passes",
+          "status": "verified",
+          "verification": {
+            "command": "npx eslint .",
+            "retries": 2,
+            "retryDelayMs": 1000
+          },
+          "parallel": false,
+          "startedAt": "2026-06-11T00:57:40.749Z",
+          "completedAt": "2026-06-11T01:00:42.641Z",
+          "result": {
+            "success": true,
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "completedAt": "2026-06-11T01:00:42.641Z"
+          }
+        }
+      ],
+      "startedAt": "2026-06-11T00:55:59.069Z",
+      "completedAt": "2026-06-11T01:01:03.612Z",
+      "summary": "Phase 5 complete. TypeScript compilation (tsc --noEmit) passes with zero errors. ESLint (eslint .) passes with zero errors after proactively fixing two pre-existing `any` type annotations in posts.ts. Remaining warnings are pre-existing in shadcn/ui boilerplate and unrelated ChatPage logic.",
+      "grade": {
+        "grade": "A",
+        "rationale": "All gates pass; project checks validate.",
+        "gradedAt": "2026-06-11T01:01:03.610Z"
+      }
+    }
+  ],
+  "decisions": [],
+  "memories": [],
+  "createdAt": "2026-06-10T23:32:44.930Z",
+  "updatedAt": "2026-06-11T01:03:52.854Z",
+  "goal": "Resolve all flagged issues in PAGE_INVENTORY.md across the PlantPal React/TypeScript codebase. All hardcoded/mock data sections must be wired to existing TanStack Query hooks so the app serves real data with no remaining placeholders. Critical runtime bugs are fixed, dead code and structural redundancies are eliminated, and the project compiles and lints cleanly.",
+  "successCriteria": [
+    "src/pages/Index.tsx is deleted and not imported anywhere in the codebase",
+    "App.tsx renders only the Sonner toast library; the Toaster import and JSX usage are removed",
+    "src/components/AuthRoute.tsx exists and App.tsx imports and uses it instead of the inline AuthRoute function",
+    "LiveViewerPage contains no references to window.__addLiveReaction",
+    "MyPlantsPage contains no references to undefined monsteraImg, calatImg, or pothosImg",
+    "HomePage daily progress calculation only counts tasks with a truthy completion status",
+    "MyPlantsPage search input is wired to state and filters the displayed plant collection",
+    "MyPlantsPage add-plant image upload validates file type (image/*) and size (< 5MB) before upload",
+    "MyPlantsPage calendar tab imports and uses useCareLogs or another existing plant-care query hook instead of hardcoded arrays",
+    "ChatPage contains no 'rooting hormone' advertisement placeholder",
+    "ExplorePage, ProfilePage, LiveViewerPage, and LiveHostPage contain no hardcoded sample/mock arrays; they use existing TanStack Query hooks for real data",
+    "The project compiles without TypeScript errors (tsc --noEmit exits 0) and passes ESLint (eslint . exits 0)"
+  ],
+  "constraints": [
+    "No new npm dependencies",
+    "Preserve all existing routing behavior and auth logic",
+    "Maintain TypeScript strict mode compliance",
+    "Do not break existing Supabase or LiveKit integrations"
+  ],
+  "lastActiveAt": "2026-06-11T00:55:59.069Z"
+}

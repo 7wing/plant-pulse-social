@@ -18,6 +18,22 @@ import { useLocalParticipant } from "@livekit/components-react";
 import { Track } from "livekit-client";
 
 import liveTourImg from "@/assets/live-tour.jpg";
+
+// Typed constants for stream settings
+const CATEGORIES = [
+  "Propagation",
+  "Plant Tour",
+  "Repotting",
+  "Q&A",
+  "Unboxing",
+  "Care Tips",
+] as const;
+
+export type Category = (typeof CATEGORIES)[number];
+
+type CoHostSetting = "None" | "Invite" | "Request Only";
+type ModerationSetting = "Auto" | "Manual" | "Strict";
+type ChatSetting = "Everyone" | "Followers" | "Subs Only";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useCreateStream, useEndStream } from "@/queries/liveStreams";
@@ -43,12 +59,13 @@ function HostVideo({
   useEffect(() => {
     const cameraPub = localParticipant.getTrackPublication(Track.Source.Camera);
     const track = cameraPub?.track;
+    const videoEl = videoRef.current;
 
-    if (track && videoRef.current) {
+    if (track && videoEl) {
       cameraTrackRef.current = track;
-      track.attach(videoRef.current);
+      track.attach(videoEl);
       return () => {
-        track.detach(videoRef.current!);
+        track.detach(videoEl);
         cameraTrackRef.current = null;
       };
     }
@@ -88,23 +105,19 @@ export default function LiveHostPage() {
   const [streamId] = useState(() => crypto.randomUUID());
   const [mode, setMode] = useState<Mode>("setup");
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Propagation");
+  const [category, setCategory] = useState<Category>("Propagation");
   const [token, setToken] = useState("");
   const [wsUrl, setWsUrl] = useState("");
   const [error, setError] = useState("");
 
+  // Stream settings state
+  const [coHostSetting, setCoHostSetting] = useState<CoHostSetting>("None");
+  const [moderationSetting, setModerationSetting] = useState<ModerationSetting>("Auto");
+  const [chatSetting, setChatSetting] = useState<ChatSetting>("Everyone");
+
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const endedRef = useRef(false);
-
-  const categories = [
-    "Propagation",
-    "Plant Tour",
-    "Repotting",
-    "Q&A",
-    "Unboxing",
-    "Care Tips",
-  ];
 
   function handleStatusChange(info: { micEnabled: boolean; cameraEnabled: boolean }) {
     setMicEnabled(info.micEnabled);
@@ -130,6 +143,9 @@ export default function LiveHostPage() {
         id: streamId,
         title: title.trim(),
         category,
+        co_host_setting: coHostSetting,
+        moderation_setting: moderationSetting,
+        chat_setting: chatSetting,
       });
 
       // 2. Fetch LiveKit token
@@ -309,7 +325,7 @@ export default function LiveHostPage() {
               Category
             </label>
             <div className="flex flex-wrap gap-2">
-              {categories.map((cat) => (
+              {CATEGORIES.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCategory(cat)}
@@ -327,26 +343,27 @@ export default function LiveHostPage() {
 
           {/* Options */}
           <div className="space-y-2">
-            {[
-              { icon: Users, label: "Invite Co-hosts", value: "None" },
-              { icon: Shield, label: "Moderation", value: "Auto" },
-              { icon: MessageSquare, label: "Chat", value: "Everyone" },
-            ].map(({ icon: Icon, label, value }) => (
-              <div
-                key={label}
-                className="flex items-center justify-between bg-foreground/20 backdrop-blur-sm rounded-xl px-4 py-3"
-              >
-                <div className="flex items-center gap-2">
-                  <Icon size={16} className="text-primary-foreground/70" />
-                  <span className="text-sm text-primary-foreground">
-                    {label}
-                  </span>
-                </div>
-                <span className="text-xs text-primary-foreground/60">
-                  {value} ›
-                </span>
-              </div>
-            ))}
+            <SettingsRow
+              icon={Users}
+              label="Invite Co-hosts"
+              value={coHostSetting}
+              options={["None", "Invite", "Request Only"] as CoHostSetting[]}
+              onChange={setCoHostSetting}
+            />
+            <SettingsRow
+              icon={Shield}
+              label="Moderation"
+              value={moderationSetting}
+              options={["Auto", "Manual", "Strict"] as ModerationSetting[]}
+              onChange={setModerationSetting}
+            />
+            <SettingsRow
+              icon={MessageSquare}
+              label="Chat"
+              value={chatSetting}
+              options={["Everyone", "Followers", "Subs Only"] as ChatSetting[]}
+              onChange={setChatSetting}
+            />
           </div>
         </div>
       </div>
@@ -498,6 +515,62 @@ function LiveRoomContent({
           End Stream
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Interactive settings row component for stream options */
+function SettingsRow<T extends string>({
+  icon: Icon,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  icon: React.ComponentType<{ size: number; className?: string }>;
+  label: string;
+  value: T;
+  options: T[];
+  onChange: (value: T) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between bg-foreground/20 backdrop-blur-sm rounded-xl px-4 py-3 transition-colors hover:bg-foreground/30"
+      >
+        <div className="flex items-center gap-2">
+          <Icon size={16} className="text-primary-foreground/70" />
+          <span className="text-sm text-primary-foreground">{label}</span>
+        </div>
+        <span className="text-xs text-primary-foreground/60">
+          {value} ›
+        </span>
+      </button>
+
+      {/* Dropdown options */}
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-foreground/95 backdrop-blur-md rounded-xl overflow-hidden shadow-elevated z-50">
+          {options.map((option) => (
+            <button
+              key={option}
+              onClick={() => {
+                onChange(option);
+                setIsOpen(false);
+              }}
+              className={`w-full px-4 py-2.5 text-left text-sm transition-colors ${
+                value === option
+                  ? "bg-plant-live text-primary-foreground font-medium"
+                  : "text-primary-foreground/80 hover:bg-foreground/50"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

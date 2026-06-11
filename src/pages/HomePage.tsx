@@ -6,7 +6,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 const AVATAR = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face";
 const FALLBACK_PLANT_IMAGE = "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=400&h=400&fit=crop";
 
-function getTaskInfo(nextWaterAt: string | null) {
+function isWateredToday(lastWateredAt: string | null) {
+  if (!lastWateredAt) return false;
+  const last = new Date(lastWateredAt);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const lastDay = new Date(last);
+  lastDay.setHours(0, 0, 0, 0);
+  return lastDay.getTime() === today.getTime();
+}
+
+function isWaterDueSoon(nextWaterAt: string | null) {
   if (!nextWaterAt) return { text: "Not scheduled", urgent: false };
   const next = new Date(nextWaterAt);
   const today = new Date();
@@ -27,21 +37,26 @@ export default function HomePage() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 
   const careTasks = plants.map((plant) => {
-    const taskInfo = getTaskInfo(plant.next_water_at);
+    const taskInfo = isWaterDueSoon(plant.next_water_at);
+    // Daily progress should only count plants actually watered today.
+    // Null / unscheduled tasks are NOT counted as completed.
+    const isCompleted = isWateredToday(plant.last_watered_at);
     return {
       id: plant.id,
       name: plant.nickname,
       task: taskInfo.text,
       img: plant.image_url || FALLBACK_PLANT_IMAGE,
       urgent: taskInfo.urgent,
+      completed: isCompleted,
       icon: Droplets,
     };
   });
 
+  // Only count tasks that were actually watered today.
+  // Exclude null/unscheduled tasks from the completed count.
+  const completedCount = careTasks.filter((t) => t.completed).length;
   const totalCount = careTasks.length;
   const urgentCount = careTasks.filter((t) => t.urgent).length;
-  // Consider non-urgent tasks as "completed" for the progress ring
-  const completedCount = totalCount - urgentCount;
   const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
@@ -111,16 +126,15 @@ export default function HomePage() {
       ) : (
         <div className="px-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pb-4">
           {careTasks.map((r, i) => {
-            const done = !r.urgent;
             const Icon = r.icon;
             return (
               <div
                 key={r.id}
-                className={`flex items-center gap-3 bg-card rounded-xl p-3 shadow-card transition-opacity ${done ? "opacity-50" : ""}`}
+                className={`flex items-center gap-3 bg-card rounded-xl p-3 shadow-card transition-opacity ${r.completed ? "opacity-50" : ""}`}
               >
                 <img src={r.img} alt={r.name} className="w-12 h-12 rounded-lg object-cover" />
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold truncate ${done ? "line-through" : ""}`}>{r.name}</p>
+                  <p className={`text-sm font-semibold truncate ${r.completed ? "line-through" : ""}`}>{r.name}</p>
                   <div className="flex items-center gap-1">
                     <Icon size={12} className={r.urgent ? "text-primary" : "text-muted-foreground"} />
                     <p className={`text-xs ${r.urgent ? "text-primary font-medium" : "text-muted-foreground"}`}>
@@ -130,11 +144,11 @@ export default function HomePage() {
                 </div>
                 <button
                   className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${
-                    done ? "bg-primary/20" : "bg-primary/10 hover:bg-primary/20"
+                    r.completed ? "bg-primary/20" : "bg-primary/10 hover:bg-primary/20"
                   }`}
-                  aria-label={done ? `${r.task} completed` : `Mark ${r.task} as done`}
+                  aria-label={r.completed ? `${r.task} completed` : `Mark ${r.task} as done`}
                 >
-                  {done ? (
+                  {r.completed ? (
                     <span className="text-primary text-sm">✓</span>
                   ) : (
                     <Icon size={16} className="text-primary" />

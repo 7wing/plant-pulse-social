@@ -1,8 +1,8 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import AuthRoute from "@/components/AuthRoute";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import BottomNav from "@/components/BottomNav";
 import FAB from "@/components/FAB";
 import SidebarNav from "@/components/SidebarNav";
@@ -28,19 +28,6 @@ import NotFound from "./pages/NotFound";
 import OfflinePage from "./pages/OfflinePage";
 
 const queryClient = new QueryClient();
-
-function AuthRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-  if (user) return <Navigate to="/" replace />;
-  return <>{children}</>;
-}
 
 function AppLayout() {
   const location = useLocation();
@@ -90,7 +77,6 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
-      <Sonner />
       <BrowserRouter>
         <AppLayout />
       </BrowserRouter>

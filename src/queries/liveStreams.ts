@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { useState, useEffect, useCallback } from "react";
 import type { Database } from "@/lib/database.types";
 
 export type Stream = Database["public"]["Tables"]["live_streams"]["Row"];
@@ -59,6 +60,9 @@ export function useCreateStream() {
       category?: string | null;
       stream_key?: string | null;
       thumbnail_url?: string | null;
+      co_host_setting?: string | null;
+      moderation_setting?: string | null;
+      chat_setting?: string | null;
     }) => {
       if (!user) throw new Error("Not authenticated");
 
@@ -71,6 +75,9 @@ export function useCreateStream() {
           category: stream.category ?? null,
           stream_key: stream.stream_key ?? null,
           thumbnail_url: stream.thumbnail_url ?? null,
+          co_host_setting: stream.co_host_setting ?? null,
+          moderation_setting: stream.moderation_setting ?? null,
+          chat_setting: stream.chat_setting ?? null,
           status: "live",
           started_at: new Date().toISOString(),
           viewer_count: 0,
@@ -124,4 +131,69 @@ export function useUpdateViewerCount() {
       if (error) throw error;
     },
   });
+}
+
+// Stream chat message type (uses Supabase Realtime, not database persistence yet)
+export interface StreamChatMessage {
+  id: string;
+  user_id: string;
+  username: string;
+  avatar_url: string | null;
+  display_name: string | null;
+  text: string;
+  created_at: string;
+}
+
+export function useStreamChat(streamId: string | undefined, enabled: boolean = true) {
+  const [messages, setMessages] = useState<StreamChatMessage[]>([]);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!streamId || !enabled) return;
+
+    const channel = supabase.channel(`stream-chat:${streamId}`);
+
+    channel
+      .on("broadcast", { event: "chat_message" }, (payload) => {
+        setMessages((prev) => {
+          // Prevent duplicates
+          if (prev.some((m) => m.id === payload.payload.id)) return prev;
+          // Keep last 50 messages
+          const newMessages = [...prev, payload.payload as StreamChatMessage];
+          return newMessages.slice(-50);
+        });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [streamId, enabled]);
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!streamId || !user || !text.trim()) return;
+
+      const channel = supabase.channel(`stream-chat:${streamId}`);
+
+      const message: StreamChatMessage = {
+        id: crypto.randomUUID(),
+        user_id: user.id,
+        username: (user as unknown as Record<string, string>).username || user.email || user.id.slice(0, 8),
+        avatar_url: (user as unknown as Record<string, string | null>).avatar_url || null,
+        display_name: (user as unknown as Record<string, string | null>).display_name || null,
+        text: text.trim(),
+        created_at: new Date().toISOString(),
+      };
+
+      await channel.send({
+        type: "broadcast",
+        event: "chat_message",
+        payload: message,
+      });
+    },
+    [streamId, user]
+  );
+
+  return { messages, sendMessage };
 }
