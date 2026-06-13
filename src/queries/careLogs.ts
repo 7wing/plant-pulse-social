@@ -71,3 +71,63 @@ export function useAddCareLog() {
     },
   });
 }
+
+export function useLogCareTask() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      plantId,
+      careType,
+      notes,
+      waterFrequencyDays,
+    }: {
+      plantId: string;
+      careType: string;
+      notes?: string;
+      waterFrequencyDays?: number | null;
+    }) => {
+      const { data: log, error: logError } = await supabase
+        .from("care_logs")
+        .insert({
+          plant_id: plantId,
+          care_type: careType,
+          notes,
+          user_id: user!.id,
+          logged_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (logError) throw logError;
+
+      if (careType === "water") {
+        const now = new Date().toISOString();
+        let nextWater: string | null = null;
+        if (waterFrequencyDays && waterFrequencyDays > 0) {
+          const next = new Date();
+          next.setDate(next.getDate() + waterFrequencyDays);
+          nextWater = next.toISOString();
+        }
+
+        const { error: plantError } = await supabase
+          .from("plants")
+          .update({
+            last_watered_at: now,
+            next_water_at: nextWater,
+          })
+          .eq("id", plantId);
+
+        if (plantError) throw plantError;
+      }
+
+      return log;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["careLogs"] });
+      queryClient.invalidateQueries({ queryKey: ["plants"] });
+      queryClient.invalidateQueries({ queryKey: ["plant", variables.plantId] });
+    },
+  });
+}

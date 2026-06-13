@@ -1,15 +1,14 @@
-import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Grid3X3, Users, Play, Moon, Sun as SunIcon, Monitor, Loader2 } from "lucide-react";
+import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Users, Play, Moon, Sun as SunIcon, Monitor, Loader2, LogOut } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useTheme } from "@/hooks/useTheme";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile, useUpdateProfile } from "@/queries/profile";
-import { useProfilePlants } from "@/queries/plants";
-import { useFeedPosts } from "@/queries/posts";
+import { useFeedPosts, useSavedPosts, useLikedPosts } from "@/queries/posts";
 import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingCount, useFollows } from "@/queries/follows";
 import { useLiveStreams } from "@/queries/liveStreams";
 import { useCreateConversation } from "@/queries/conversations";
@@ -21,6 +20,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,7 +35,6 @@ import { supabase } from "@/lib/supabase";
 const AVATAR = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face";
 
 const profileTabs = [
-  { id: "plants", label: "Plants", icon: Grid3X3 },
   { id: "posts", label: "Posts", icon: MessageCircle },
   { id: "connections", label: "Friends", icon: Users },
   { id: "lives", label: "Lives", icon: Play },
@@ -61,12 +64,16 @@ function formatCount(n: number): string {
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("plants");
+  const { id } = useParams<{ id: string }>();
+  const isOwnProfile = !id;
+
+  const [activeTab, setActiveTab] = useState("posts");
+  const [postsSubTab, setPostsSubTab] = useState("created");
   const { theme, setTheme } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile(id);
   const updateProfile = useUpdateProfile();
   const { user: currentUser } = useAuth();
   const follow = useFollow();
@@ -108,16 +115,16 @@ export default function ProfilePage() {
   const { data: followersCount = 0 } = useFollowerCount(profile?.id);
   const { data: followingCount = 0 } = useFollowingCount(profile?.id);
 
-  // Plants tab — real data from useProfilePlants
-  const { data: profilePlants = [], isLoading: plantsLoading } = useProfilePlants(profile?.id);
-
   // Posts tab — real data from useFeedPosts, filtered to profile owner
   const { data: postsData, isLoading: postsLoading } = useFeedPosts(false);
   const profilePosts = useMemo(() => {
     if (!postsData) return [];
     const allPosts = postsData.pages.flat();
-    return currentUser ? allPosts.filter((p) => p.author_id === currentUser.id) : allPosts;
-  }, [postsData, currentUser]);
+    return profile ? allPosts.filter((p) => p.author_id === profile.id) : allPosts;
+  }, [postsData, profile]);
+
+  const { data: savedPosts = [], isLoading: savedLoading } = useSavedPosts();
+  const { data: likedPosts = [], isLoading: likedLoading } = useLikedPosts();
 
   // Connections tab — real data from useFollows
   const { data: followingIds = new Set<string>() } = useFollows();
@@ -127,46 +134,59 @@ export default function ProfilePage() {
   const { data: liveStreams = [], isLoading: streamsLoading } = useLiveStreams();
 
   return (
-    <div className="pb-24 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen">
       {/* Header */}
       <div className="relative gradient-hero">
         <div className="flex items-center justify-between px-4 pt-4">
           <h1 className="text-lg font-bold">Profile</h1>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowSettings(!showSettings)}
-              className="w-9 h-9 bg-card/80 backdrop-blur-sm rounded-full flex items-center justify-center"
-              aria-label="Settings"
-            >
-              <Settings size={18} />
-            </button>
+            {isOwnProfile && (
+            <Popover open={showSettings} onOpenChange={setShowSettings}>
+              <PopoverTrigger asChild>
+                <button
+                  className="w-9 h-9 bg-card/80 backdrop-blur-sm rounded-full flex items-center justify-center"
+                  aria-label="Settings"
+                >
+                  <Settings size={18} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-4">
+                <p className="text-xs font-bold text-muted-foreground mb-2">Appearance</p>
+                <div className="flex gap-1 bg-muted rounded-xl p-1">
+                  {([
+                    { value: "light" as const, icon: SunIcon, label: "Light" },
+                    { value: "dark" as const, icon: Moon, label: "Dark" },
+                    { value: "system" as const, icon: Monitor, label: "Auto" },
+                  ]).map(({ value, icon: Icon, label }) => (
+                    <button
+                      key={value}
+                      onClick={() => setTheme(value)}
+                      className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        theme === value ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"
+                      }`}
+                    >
+                      <Icon size={12} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 pt-3 border-t border-border">
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      navigate("/login");
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            )}
           </div>
         </div>
-
-        {/* Settings panel */}
-        {showSettings && (
-          <div className="absolute top-14 right-4 z-40 bg-card rounded-2xl shadow-elevated p-4 w-56 animate-scale-in border border-border">
-            <p className="text-xs font-bold text-muted-foreground mb-2">Appearance</p>
-            <div className="flex gap-1 bg-muted rounded-xl p-1">
-              {([
-                { value: "light" as const, icon: SunIcon, label: "Light" },
-                { value: "dark" as const, icon: Moon, label: "Dark" },
-                { value: "system" as const, icon: Monitor, label: "Auto" },
-              ]).map(({ value, icon: Icon, label }) => (
-                <button
-                  key={value}
-                  onClick={() => setTheme(value)}
-                  className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    theme === value ? "bg-card shadow-card text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  <Icon size={12} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Profile info */}
         <div className="flex flex-col items-center pt-4 pb-6 px-4">
@@ -269,28 +289,34 @@ export default function ProfilePage() {
                     </button>
                   </>
                 )}
-                <button
-                  onClick={() => {
-                    reset({
-                      display_name: profile?.display_name || "",
-                      bio: profile?.bio || "",
-                      location: profile?.location || "",
-                      avatar_url: profile?.avatar_url || "",
-                    });
-                    setEditOpen(true);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
-                >
-                  <Edit2 size={14} />
-                  Edit Profile
-                </button>
-                <button className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-muted text-foreground text-sm font-semibold">
-                  <Video size={14} />
-                  Go Live
-                </button>
-                <button className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center" aria-label="Add plant">
-                  <Plus size={18} />
-                </button>
+                {isOwnProfile && (
+                  <button
+                    onClick={() => {
+                      reset({
+                        display_name: profile?.display_name || "",
+                        bio: profile?.bio || "",
+                        location: profile?.location || "",
+                        avatar_url: profile?.avatar_url || "",
+                      });
+                      setEditOpen(true);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
+                  >
+                    <Edit2 size={14} />
+                    Edit Profile
+                  </button>
+                )}
+                {isOwnProfile && (
+                  <button className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-muted text-foreground text-sm font-semibold">
+                    <Video size={14} />
+                    Go Live
+                  </button>
+                )}
+                {isOwnProfile && (
+                  <button className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center" aria-label="Add plant">
+                    <Plus size={18} />
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -332,56 +358,116 @@ export default function ProfilePage() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "plants" && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 px-4">
-          {plantsLoading ? (
-            Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-square rounded-lg" />
-            ))
-          ) : profilePlants.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
-              No plants yet. Add your first plant!
-            </div>
-          ) : (
-            profilePlants.map((plant) => (
-              <div key={plant.id} className="aspect-square rounded-lg overflow-hidden">
-                <img
-                  src={plant.photo_url || AVATAR}
-                  alt={plant.nickname || plant.species || "Plant"}
-                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
       {activeTab === "posts" && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1 px-4">
-          {postsLoading ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="aspect-square rounded-lg" />
-            ))
-          ) : profilePosts.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
-              No posts yet. Share your first plant update!
-            </div>
-          ) : (
-            profilePosts.map((post) => (
-              <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
-                <img
-                  src={post.image_url || AVATAR}
-                  alt={post.content || "Post"}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
-                  <MessageCircle size={10} className="text-primary-foreground" />
-                  <span className="text-[10px] text-primary-foreground font-medium">
-                    {post.comments_count ?? 0}
-                  </span>
+        <div className="px-4 space-y-3">
+          {/* Posts sub-tabs */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+            {[
+              { id: "created", label: isOwnProfile ? "Created by You" : "Posts" },
+              ...(isOwnProfile ? [{ id: "saved", label: "Saved" }, { id: "liked", label: "Liked" }] : []),
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setPostsSubTab(id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                  postsSubTab === id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {postsSubTab === "created" && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+              {postsLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                ))
+              ) : profilePosts.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
+                  No posts yet. Share your first plant update!
                 </div>
-              </div>
-            ))
+              ) : (
+                profilePosts.map((post) => (
+                  <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
+                    <img
+                      src={post.image_url || AVATAR}
+                      alt={post.content || "Post"}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
+                      <MessageCircle size={10} className="text-primary-foreground" />
+                      <span className="text-[10px] text-primary-foreground font-medium">
+                        {post.comments_count ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {postsSubTab === "saved" && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+              {savedLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                ))
+              ) : savedPosts.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
+                  No saved posts yet. Bookmark posts you love!
+                </div>
+              ) : (
+                savedPosts.map((post) => (
+                  <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
+                    <img
+                      src={post.image_url || AVATAR}
+                      alt={post.caption || "Post"}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
+                      <MessageCircle size={10} className="text-primary-foreground" />
+                      <span className="text-[10px] text-primary-foreground font-medium">
+                        {post.comments_count ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {postsSubTab === "liked" && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+              {likedLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                ))
+              ) : likedPosts.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
+                  No liked posts yet. Heart posts you enjoy!
+                </div>
+              ) : (
+                likedPosts.map((post) => (
+                  <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
+                    <img
+                      src={post.image_url || AVATAR}
+                      alt={post.caption || "Post"}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
+                      <MessageCircle size={10} className="text-primary-foreground" />
+                      <span className="text-[10px] text-primary-foreground font-medium">
+                        {post.comments_count ?? 0}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           )}
         </div>
       )}
@@ -517,7 +603,7 @@ function FollowingList({ followingIds }: { followingIds: string[] }) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-4 gap-3 px-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="flex flex-col items-center gap-1.5">
             <Skeleton className="w-14 h-14 rounded-full" />
@@ -537,7 +623,7 @@ function FollowingList({ followingIds }: { followingIds: string[] }) {
   }
 
   return (
-    <div className="grid grid-cols-4 gap-3 px-4">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 px-4">
       {profileData.map((user) => (
         <div key={user.id} className="flex flex-col items-center gap-1.5">
           <img

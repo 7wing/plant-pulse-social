@@ -113,12 +113,17 @@ export function useLikePost() {
         .from("likes")
         .insert({ post_id: postId, user_id: user!.id });
       if (error) throw error;
+
+      const { error: rpcError } = await supabase.rpc("increment_likes", {
+        p_post_id: postId,
+      });
+      if (rpcError) throw rpcError;
     },
     onMutate: async (postId: string) => {
       await queryClient.cancelQueries({ queryKey: ["feed", "posts"] });
       await queryClient.cancelQueries({ queryKey: ["postLike", postId] });
 
-      const previousFeed = queryClient.getQueryData(["feed", "posts"]);
+      const previousFeeds = queryClient.getQueriesData({ queryKey: ["feed", "posts"] });
 
       queryClient.setQueryData(["postLike", postId, user?.id], true);
 
@@ -136,12 +141,14 @@ export function useLikePost() {
         };
       });
 
-      return { previousFeed };
+      return { previousFeeds };
     },
     onError: (_err, postId, context) => {
       queryClient.setQueryData(["postLike", postId, user?.id], false);
-      if (context?.previousFeed) {
-        queryClient.setQueryData(["feed", "posts"], context.previousFeed);
+      if (context?.previousFeeds) {
+        context.previousFeeds.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
       }
     },
     onSettled: (_data, _error, postId) => {
@@ -163,12 +170,17 @@ export function useUnlikePost() {
         .eq("post_id", postId)
         .eq("user_id", user!.id);
       if (error) throw error;
+
+      const { error: rpcError } = await supabase.rpc("decrement_likes", {
+        p_post_id: postId,
+      });
+      if (rpcError) throw rpcError;
     },
     onMutate: async (postId: string) => {
       await queryClient.cancelQueries({ queryKey: ["feed", "posts"] });
       await queryClient.cancelQueries({ queryKey: ["postLike", postId] });
 
-      const previousFeed = queryClient.getQueryData(["feed", "posts"]);
+      const previousFeeds = queryClient.getQueriesData({ queryKey: ["feed", "posts"] });
 
       queryClient.setQueryData(["postLike", postId, user?.id], false);
 
@@ -186,17 +198,138 @@ export function useUnlikePost() {
         };
       });
 
-      return { previousFeed };
+      return { previousFeeds };
     },
     onError: (_err, postId, context) => {
       queryClient.setQueryData(["postLike", postId, user?.id], true);
-      if (context?.previousFeed) {
-        queryClient.setQueryData(["feed", "posts"], context.previousFeed);
+      if (context?.previousFeeds) {
+        context.previousFeeds.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
       }
     },
     onSettled: (_data, _error, postId) => {
       queryClient.invalidateQueries({ queryKey: ["feed", "posts"] });
       queryClient.invalidateQueries({ queryKey: ["postLike", postId] });
     },
+  });
+}
+
+export function usePostSaveStatus(postId?: string) {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["postSave", postId, user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saved_posts")
+        .select("post_id")
+        .eq("post_id", postId!)
+        .eq("user_id", user!.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!postId && !!user?.id,
+  });
+}
+
+export function useSavePost() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase
+        .from("saved_posts")
+        .insert({ post_id: postId, user_id: user!.id });
+      if (error) throw error;
+    },
+    onSuccess: (_data, postId) => {
+      queryClient.invalidateQueries({ queryKey: ["postSave", postId] });
+      queryClient.invalidateQueries({ queryKey: ["savedPosts"] });
+    },
+  });
+}
+
+export function useUnsavePost() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { error } = await supabase
+        .from("saved_posts")
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, postId) => {
+      queryClient.invalidateQueries({ queryKey: ["postSave", postId] });
+      queryClient.invalidateQueries({ queryKey: ["savedPosts"] });
+    },
+  });
+}
+
+export function useSavedPosts() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["savedPosts", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("saved_posts")
+        .select("post_id, posts(*, profiles:author_id(username, avatar_url, display_name))")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data ?? []).map((row) => row.posts) as PostWithAuthor[];
+    },
+    enabled: !!user?.id,
+  });
+}
+
+export function useLikedPosts() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["likedPosts", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("likes")
+        .select("post_id, posts(*, profiles:author_id(username, avatar_url, display_name))")
+        .eq("user_id", user!.id)
+        .order("post_id", { ascending: false });
+
+      if (error) throw error;
+      return (data ?? []).map((row) => row.posts) as PostWithAuthor[];
+    },
+    enabled: !!user?.id,
+  });
+}
+
+export interface PostLiker {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+export function usePostLikers(postId?: string) {
+  return useQuery({
+    queryKey: ["postLikers", postId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("likes")
+        .select("profiles:user_id(id, username, display_name, avatar_url)")
+        .eq("post_id", postId!);
+
+      if (error) throw error;
+      return (data ?? []).map((row) => row.profiles!) as PostLiker[];
+    },
+    enabled: !!postId,
   });
 }

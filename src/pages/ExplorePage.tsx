@@ -45,7 +45,7 @@ export default function ExplorePage() {
   };
 
   return (
-    <div className="pb-24 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-2">
         <h1 className="text-xl font-bold mb-3">Explore</h1>
@@ -140,7 +140,7 @@ export default function ExplorePage() {
       )}
 
       {/* Plant Directory */}
-      <SectionHeader title="Popular Plants 🌿" actionPath="/my-plants" />
+      <SectionHeader title="Popular Plants 🌿" actionPath="/" />
       {plants.length === 0 ? (
         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
           <p className="text-sm text-muted-foreground col-span-full py-8 text-center">No plants yet. Add your first plant!</p>

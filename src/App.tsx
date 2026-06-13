@@ -3,9 +3,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AuthRoute from "@/components/AuthRoute";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import BottomNav from "@/components/BottomNav";
 import FAB from "@/components/FAB";
-import SidebarNav from "@/components/SidebarNav";
+import FloatingNav from "@/components/FloatingNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,8 +37,8 @@ function AppLayout() {
     location.pathname.startsWith("/live/");
 
   return (
-    <div className={`max-w-lg md:max-w-7xl mx-auto relative min-h-screen bg-background ${!isMobile ? "md:pl-60" : ""}`}>
-      {!hideNav && <SidebarNav />}
+    <div className="max-w-lg md:max-w-7xl mx-auto relative min-h-screen bg-background md:pt-20">
+      {!hideNav && <FloatingNav />}
       <ErrorBoundary>
       <Routes>
         {/* Public auth routes — redirect authenticated users to home */}
@@ -53,6 +52,7 @@ function AppLayout() {
         <Route path="/my-plants" element={<ProtectedRoute><MyPlantsPage /></ProtectedRoute>} />
         <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
         <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/profile/:id" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/chat" element={<ProtectedRoute><ConversationsPage /></ProtectedRoute>} />
         <Route path="/chat/:conversationId" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
         <Route path="/live" element={<ProtectedRoute><DiscoverLivePage /></ProtectedRoute>} />
@@ -63,12 +63,7 @@ function AppLayout() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </ErrorBoundary>
-      {!hideNav && isMobile && (
-        <>
-          <FAB />
-          <BottomNav />
-        </>
-      )}
+      {!hideNav && isMobile && <FAB />}
     </div>
   );
 }

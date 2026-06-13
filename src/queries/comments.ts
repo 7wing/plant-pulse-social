@@ -37,6 +37,8 @@ export function useAddComment() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
+  type FeedData = { pages: { id: string; comments_count: number | null }[][] } | undefined;
+
   return useMutation({
     mutationFn: async (comment: Omit<CommentInsert, "author_id">) => {
       const { data, error } = await supabase
@@ -46,9 +48,44 @@ export function useAddComment() {
         .single();
 
       if (error) throw error;
+
+      const { error: rpcError } = await supabase.rpc("increment_comments", {
+        p_post_id: comment.post_id!,
+      });
+      if (rpcError) throw rpcError;
+
       return data;
     },
-    onSuccess: (_data, variables) => {
+    onMutate: async (comment) => {
+      await queryClient.cancelQueries({ queryKey: ["comments", comment.post_id] });
+      await queryClient.cancelQueries({ queryKey: ["feed", "posts"] });
+
+      const previousFeeds = queryClient.getQueriesData<FeedData>({ queryKey: ["feed", "posts"] });
+
+      queryClient.setQueriesData<FeedData>({ queryKey: ["feed", "posts"] }, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) =>
+            page.map((post) =>
+              post.id === comment.post_id
+                ? { ...post, comments_count: (post.comments_count ?? 0) + 1 }
+                : post
+            )
+          ),
+        };
+      });
+
+      return { previousFeeds };
+    },
+    onError: (_err, comment, context) => {
+      if (context?.previousFeeds) {
+        context.previousFeeds.forEach(([key, data]) => {
+          queryClient.setQueryData(key, data);
+        });
+      }
+    },
+    onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: ["comments", variables.post_id] });
       queryClient.invalidateQueries({ queryKey: ["feed", "posts"] });
     },

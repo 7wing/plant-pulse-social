@@ -85,7 +85,7 @@ export default function PlantDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <div className="min-h-screen bg-background pb-20 md:pb-4">
       {/* Hero image */}
       <div className="relative h-72">
         <img

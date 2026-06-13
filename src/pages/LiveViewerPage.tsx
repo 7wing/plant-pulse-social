@@ -62,43 +62,56 @@ export default function LiveViewerPage() {
   const [hasEnded, setHasEnded] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [liveViewerCount, setLiveViewerCount] = useState(0);
+  const lastCountUpdateRef = useRef<number>(0);
 
   // Fetch LiveKit token once stream and user are available
+  const fetchToken = async () => {
+    try {
+      setTokenError(null);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) throw new Error("Not authenticated");
+
+      let lastErr: Error | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                room_name: streamId,
+                identity: user!.id,
+                role: "viewer",
+              }),
+            }
+          );
+
+          if (!res.ok) throw new Error("Failed to fetch token");
+          const data = await res.json();
+          setToken(data.token);
+          setWsUrl(data.ws_url);
+          return;
+        } catch (err) {
+          lastErr = err instanceof Error ? err : new Error("Token fetch failed");
+          if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        }
+      }
+      throw lastErr ?? new Error("Token fetch failed");
+    } catch (err) {
+      setTokenError(err instanceof Error ? err.message : "Token fetch failed");
+    }
+  };
+
   useEffect(() => {
     if (!stream || !user) return;
-
-    async function fetchToken() {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData.session?.access_token;
-        if (!accessToken) throw new Error("Not authenticated");
-
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              room_name: streamId,
-              identity: user.id,
-              role: "viewer",
-            }),
-          }
-        );
-
-        if (!res.ok) throw new Error("Failed to fetch token");
-        const data = await res.json();
-        setToken(data.token);
-        setWsUrl(data.ws_url);
-      } catch (err) {
-        setTokenError(err instanceof Error ? err.message : "Token fetch failed");
-      }
-    }
-
+    if (stream.status !== "live") return;
     fetchToken();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stream, user, streamId]);
 
   // Supabase Presence for real-time viewer count
@@ -114,7 +127,11 @@ export default function LiveViewerPage() {
         const state = channel.presenceState();
         const count = Object.keys(state).length;
         setLiveViewerCount(count);
-        updateViewerCount.mutate({ id: streamId, viewer_count: count });
+        const now = Date.now();
+        if (now - lastCountUpdateRef.current > 5000) {
+          lastCountUpdateRef.current = now;
+          updateViewerCount.mutate({ id: streamId, viewer_count: count });
+        }
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -183,12 +200,22 @@ export default function LiveViewerPage() {
           {tokenError && (
             <p className="text-primary-foreground/60 text-sm mb-4">{tokenError}</p>
           )}
-          <button
-            onClick={() => navigate("/live")}
-            className="px-6 py-2.5 rounded-full bg-plant-live text-white text-sm font-bold hover:bg-plant-live/90 transition-colors"
-          >
-            Back to Live
-          </button>
+          <div className="flex gap-3 justify-center">
+            {tokenError && (
+              <button
+                onClick={fetchToken}
+                className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors"
+              >
+                Retry
+              </button>
+            )}
+            <button
+              onClick={() => navigate("/live")}
+              className="px-6 py-2.5 rounded-full bg-plant-live text-white text-sm font-bold hover:bg-plant-live/90 transition-colors"
+            >
+              Back to Live
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -388,7 +415,7 @@ function ChatOverlay({
   }, [messages]);
 
   return (
-    <div className="absolute bottom-0 left-0 right-16 z-10 px-4 pb-4">
+    <div className="absolute bottom-0 left-0 right-0 md:right-16 z-10 px-4 pb-4">
       {/* Chat messages */}
       <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
         {messages.map((m, i) => (

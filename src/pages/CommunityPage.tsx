@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,6 +30,7 @@ const feedTabs = ["For You", "Following"];
 
 export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState("For You");
+  const [searchQuery, setSearchQuery] = useState("");
   const [newPostOpen, setNewPostOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -52,6 +53,19 @@ export default function CommunityPage() {
     useFeedPosts(activeTab === "Following");
 
   const posts = data?.pages.flat() ?? [];
+
+  const filteredPosts = useMemo(() => {
+    if (!searchQuery.trim()) return posts;
+    const q = searchQuery.toLowerCase();
+    return posts.filter((post) => {
+      const captionMatch = post.caption?.toLowerCase().includes(q);
+      const tagMatch = post.tags?.some((t) => t.toLowerCase().includes(q));
+      const authorMatch =
+        post.profiles?.username?.toLowerCase().includes(q) ||
+        post.profiles?.display_name?.toLowerCase().includes(q);
+      return captionMatch || tagMatch || authorMatch;
+    });
+  }, [posts, searchQuery]);
 
   const onSubmit = async (data: PostFormData) => {
     try {
@@ -110,7 +124,7 @@ export default function CommunityPage() {
   }, [fetchNextPage, hasNextPage]);
 
   return (
-    <div className="pb-24 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-2">
         <h1 className="text-xl font-bold mb-3">Community</h1>
@@ -122,6 +136,8 @@ export default function CommunityPage() {
           <input
             type="text"
             placeholder="Search posts, users, tags..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-muted rounded-xl pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -141,7 +157,7 @@ export default function CommunityPage() {
       {/* FAB for New Post */}
       <Button
         onClick={() => setNewPostOpen(true)}
-        className="fixed bottom-24 right-4 z-40 rounded-full w-14 h-14 shadow-lg p-0"
+        className="fixed bottom-20 right-4 z-40 rounded-full w-14 h-14 shadow-lg p-0"
         size="icon"
       >
         <Plus className="w-5 h-5" />
@@ -162,12 +178,13 @@ export default function CommunityPage() {
             "#UrbanJungle",
             "#SpringGrowth",
           ].map((tag) => (
-            <span
+            <button
               key={tag}
+              onClick={() => setSearchQuery(tag.replace("#", ""))}
               className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium cursor-pointer hover:bg-primary/20 transition-colors"
             >
               {tag}
-            </span>
+            </button>
           ))}
         </div>
       </div>
@@ -197,7 +214,7 @@ export default function CommunityPage() {
             </p>
           </div>
         ) : (
-          posts.map((post) => <PostCard key={post.id} post={post} />)
+          filteredPosts.map((post) => <PostCard key={post.id} post={post} />)
         )}
 
         {/* Infinite scroll trigger / loading more indicator */}

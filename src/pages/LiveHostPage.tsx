@@ -148,29 +148,43 @@ export default function LiveHostPage() {
         chat_setting: chatSetting,
       });
 
-      // 2. Fetch LiveKit token
+      // 2. Fetch LiveKit token (with retry)
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
       if (!accessToken) throw new Error("No session token");
 
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            room_name: streamId,
-            identity: user.id,
-            role: "host",
-          }),
-        }
-      );
+      let lastErr: Error | null = null;
+      let liveToken = "";
+      let ws_url = "";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const res = await fetch(
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/livekit-token`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                room_name: streamId,
+                identity: user.id,
+                role: "host",
+              }),
+            }
+          );
 
-      if (!res.ok) throw new Error("Failed to fetch LiveKit token");
-      const { token: liveToken, ws_url } = await res.json();
+          if (!res.ok) throw new Error("Failed to fetch LiveKit token");
+          const data = await res.json();
+          liveToken = data.token;
+          ws_url = data.ws_url;
+          break;
+        } catch (err) {
+          lastErr = err instanceof Error ? err : new Error("Failed to fetch LiveKit token");
+          if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        }
+      }
+      if (!liveToken) throw lastErr ?? new Error("Failed to fetch LiveKit token");
 
       setToken(liveToken);
       setWsUrl(ws_url);
@@ -181,6 +195,12 @@ export default function LiveHostPage() {
         err instanceof Error ? err.message : "Failed to start stream."
       );
       setMode("setup");
+      // Clean up the zombie stream record since the token/LiveKit step failed
+      try {
+        await endStream.mutateAsync(streamId);
+      } catch (cleanupErr) {
+        console.error("[LiveHostPage] Failed to clean up stream:", cleanupErr);
+      }
     }
   }
 
@@ -370,7 +390,8 @@ export default function LiveHostPage() {
 
       {/* Bottom controls */}
       <div className="absolute bottom-0 left-0 right-0 z-10 px-4 pb-8 safe-bottom">
-        <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="max-w-[320px] md:max-w-md lg:max-w-lg mx-auto">
+          <div className="flex items-center justify-center gap-4 mb-4">
           <button
             className="w-12 h-12 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center"
             aria-label="Microphone"
@@ -403,6 +424,7 @@ export default function LiveHostPage() {
             <Clock size={16} />
             Schedule
           </button>
+        </div>
         </div>
       </div>
     </div>

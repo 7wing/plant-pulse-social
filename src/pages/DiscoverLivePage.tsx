@@ -69,7 +69,7 @@ export default function DiscoverLivePage() {
   const { data: streams, isLoading } = useLiveStreams();
 
   return (
-    <div className="pb-24 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-3">
         <h1 className="text-xl font-bold">Live Streams</h1>
@@ -100,7 +100,7 @@ export default function DiscoverLivePage() {
         </div>
       ) : !streams || streams.length === 0 ? (
         /* Empty state */
-        <div className="flex flex-col items-center justify-center py-24 gap-4 px-4">
+        <div className="flex flex-col items-center justify-center py-24 gap-4 px-4 max-w-md mx-auto">
           <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
             <Video size={32} className="text-muted-foreground" />
           </div>

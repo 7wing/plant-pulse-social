@@ -1,8 +1,10 @@
 import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 import { useState } from "react";
-import { useLikePost, useUnlikePost, usePostLikeStatus } from "@/queries/posts";
+import { toast } from "sonner";
+import { useLikePost, useUnlikePost, usePostLikeStatus, useSavePost, useUnsavePost, usePostSaveStatus } from "@/queries/posts";
 import { useComments, useAddComment } from "@/queries/comments";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import PostLikersDialog from "@/components/PostLikersDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
@@ -29,18 +31,25 @@ const AVATAR_FALLBACK = "https://images.unsplash.com/photo-1494790108377-be9c29b
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1459411552884-841db9b3cc2a?w=800&h=600&fit=crop";
 
 export default function PostCard({ post }: PostCardProps) {
-  const [saved, setSaved] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [likersOpen, setLikersOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
 
   const likePost = useLikePost();
   const unlikePost = useUnlikePost();
   const { data: hasLiked } = usePostLikeStatus(post.id);
 
+  const savePost = useSavePost();
+  const unsavePost = useUnsavePost();
+  const { data: isSaved } = usePostSaveStatus(post.id);
+
   const { data: comments, isLoading: commentsLoading } = useComments(commentsOpen ? post.id : undefined);
   const addComment = useAddComment();
 
+  const isLikePending = likePost.isPending || unlikePost.isPending;
+
   const handleLike = () => {
+    if (isLikePending) return;
     if (hasLiked) {
       unlikePost.mutate(post.id);
     } else {
@@ -51,7 +60,7 @@ export default function PostCard({ post }: PostCardProps) {
   const handleAddComment = () => {
     if (!commentText.trim()) return;
     addComment.mutate(
-      { post_id: post.id, content: commentText.trim() },
+      { post_id: post.id, text: commentText.trim() },
       { onSuccess: () => setCommentText("") }
     );
   };
@@ -79,21 +88,59 @@ export default function PostCard({ post }: PostCardProps) {
         <div className="p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button onClick={handleLike} className="transition-transform active:scale-125" aria-label="Like">
-                <Heart size={22} className={hasLiked ? "fill-plant-live text-plant-live" : "text-muted-foreground"} />
+              <button onClick={handleLike} disabled={isLikePending} className="transition-transform active:scale-125 disabled:opacity-50" aria-label="Like">
+                {isLikePending ? (
+                  <Loader2 size={22} className="animate-spin text-muted-foreground" />
+                ) : (
+                  <Heart size={22} className={hasLiked ? "fill-plant-live text-plant-live" : "text-muted-foreground"} />
+                )}
               </button>
               <button onClick={() => setCommentsOpen(true)} aria-label="Comment">
                 <MessageCircle size={22} className="text-muted-foreground" />
               </button>
-              <button aria-label="Share">
+              <button
+                onClick={async () => {
+                  const url = `${window.location.origin}/community?post=${post.id}`;
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: post.caption ?? "PlantPal Post",
+                        text: post.caption ?? "",
+                        url,
+                      });
+                    } catch {
+                      // User cancelled share
+                    }
+                  } else {
+                    try {
+                      await navigator.clipboard.writeText(url);
+                      toast.success("Link copied to clipboard");
+                    } catch {
+                      toast.error("Failed to copy link");
+                    }
+                  }
+                }}
+                aria-label="Share"
+              >
                 <Share2 size={20} className="text-muted-foreground" />
               </button>
             </div>
-            <button onClick={() => setSaved(!saved)} aria-label="Save">
-              <Bookmark size={22} className={saved ? "fill-primary text-primary" : "text-muted-foreground"} />
+            <button
+              onClick={() => {
+                if (isSaved) {
+                  unsavePost.mutate(post.id);
+                } else {
+                  savePost.mutate(post.id);
+                }
+              }}
+              aria-label="Save"
+            >
+              <Bookmark size={22} className={isSaved ? "fill-primary text-primary" : "text-muted-foreground"} />
             </button>
           </div>
-          <p className="text-sm font-semibold">{post.likes_count ?? 0} likes</p>
+          <button onClick={() => setLikersOpen(true)} className="text-sm font-semibold text-left">
+            {post.likes_count ?? 0} likes
+          </button>
           <p className="text-sm">
             <span className="font-semibold">{username}</span>{" "}
             {post.caption}
@@ -108,6 +155,8 @@ export default function PostCard({ post }: PostCardProps) {
           </button>
         </div>
       </div>
+
+      <PostLikersDialog postId={post.id} open={likersOpen} onOpenChange={setLikersOpen} />
 
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
         <SheetContent side="bottom" className="h-[70vh]">
@@ -131,7 +180,7 @@ export default function PostCard({ post }: PostCardProps) {
                     <div>
                       <p className="text-sm">
                         <span className="font-semibold">{comment.profiles?.username || "Unknown"}</span>{" "}
-                        {comment.content}
+                        {comment.text}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : ""}
