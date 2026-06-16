@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { Leaf, Mail, Lock, User, Chrome, CheckCircle } from "lucide-react";
+import { Leaf, Mail, Lock, User, Chrome, Apple, CheckCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +66,7 @@ export default function SignupPage() {
             <div className="w-14 h-14 rounded-2xl gradient-leaf flex items-center justify-center shadow-fab mb-3">
               <Leaf size={28} className="text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">PlantPal</h1>
+            <h1 className="text-2xl font-bold text-foreground">Plant Pulse</h1>
           </div>
           <Card className="border-border shadow-card">
             <CardContent className="pt-6 space-y-4">
@@ -101,8 +101,8 @@ export default function SignupPage() {
           <div className="w-14 h-14 rounded-2xl gradient-leaf flex items-center justify-center shadow-fab mb-3">
             <Leaf size={28} className="text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">PlantPal</h1>
-          <p className="text-sm text-muted-foreground mt-1">Join the plant community</p>
+          <h1 className="text-2xl font-bold text-foreground">Plant Pulse</h1>
+          <p className="text-sm text-muted-foreground mt-1">Care for your plants, together</p>
         </div>
 
         <Card className="border-border shadow-card">
@@ -193,11 +193,28 @@ export default function SignupPage() {
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full gap-2"
               onClick={handleGoogleSignIn}
             >
               <Chrome size={16} />
               Continue with Google
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-2"
+              onClick={async () => {
+                setError(null);
+                try {
+                  await signInWithApple();
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : "Failed to sign in with Apple");
+                }
+              }}
+            >
+              <Apple size={16} />
+              Continue with Apple
             </Button>
           </CardContent>
 

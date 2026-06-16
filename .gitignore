@@ -17,6 +17,7 @@ dist-ssr
 .env.local
 .env.*.local
 .vercel
+.kimchi
 
 # Editor directories and files
 .vscode/*

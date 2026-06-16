@@ -26,6 +26,7 @@ export default function ChatPage() {
     if (conversationId) {
       markAsRead.mutate(conversationId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId]);
   useEffect(() => {
     if (!conversationId) return;

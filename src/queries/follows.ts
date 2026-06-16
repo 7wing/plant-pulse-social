@@ -1,6 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import type { Database } from "@/lib/database.types";
+
+export type ProfileSummary = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+};
 
 export function useFollows() {
   const { user } = useAuth();
@@ -107,6 +115,42 @@ export function useFollowingCount(profileId?: string) {
         .eq("follower_id", profileId!);
       if (error) throw error;
       return count ?? 0;
+    },
+    enabled: !!profileId,
+  });
+}
+
+export function useFollowerList(profileId?: string) {
+  return useQuery({
+    queryKey: ["followerList", profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("follows")
+        .select("follower_id, profiles:follower_id(id, username, display_name, avatar_url)")
+        .eq("following_id", profileId!);
+
+      if (error) throw error;
+      return (data ?? [])
+        .map((row) => row.profiles as ProfileSummary)
+        .filter(Boolean) as ProfileSummary[];
+    },
+    enabled: !!profileId,
+  });
+}
+
+export function useFollowingList(profileId?: string) {
+  return useQuery({
+    queryKey: ["followingList", profileId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("follows")
+        .select("following_id, profiles:following_id(id, username, display_name, avatar_url)")
+        .eq("follower_id", profileId!);
+
+      if (error) throw error;
+      return (data ?? [])
+        .map((row) => row.profiles as ProfileSummary)
+        .filter(Boolean) as ProfileSummary[];
     },
     enabled: !!profileId,
   });

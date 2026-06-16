@@ -159,51 +159,76 @@ export default function PostCard({ post }: PostCardProps) {
       <PostLikersDialog postId={post.id} open={likersOpen} onOpenChange={setLikersOpen} />
 
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
-        <SheetContent side="bottom" className="h-[70vh]">
-          <SheetHeader>
-            <SheetTitle>Comments</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col h-full mt-4">
-            <div className="flex-1 overflow-y-auto space-y-3">
-              {commentsLoading ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                </div>
-              ) : comments && comments.length > 0 ? (
-                comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-2">
-                    <img
-                      src={comment.profiles?.avatar_url || AVATAR_FALLBACK}
-                      alt={comment.profiles?.username || "User"}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                    <div>
-                      <p className="text-sm">
-                        <span className="font-semibold">{comment.profiles?.username || "Unknown"}</span>{" "}
-                        {comment.text}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : ""}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">No comments yet. Be the first!</p>
-              )}
-            </div>
-            <div className="flex gap-2 pt-3 border-t mt-3">
-              <Input
-                placeholder="Add a comment..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
-                disabled={addComment.isPending}
+        <SheetContent side="bottom" className="h-[80vh] flex flex-col p-0">
+          {/* Post Preview */}
+          <div className="flex-shrink-0 p-3 border-b bg-muted/30">
+            <div className="flex items-start gap-3">
+              <img
+                src={image}
+                alt={post.caption ?? ""}
+                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
               />
-              <Button onClick={handleAddComment} disabled={addComment.isPending || !commentText.trim()}>
-                {addComment.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Post"}
-              </Button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">{username}</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">
+                  {post.caption}
+                </p>
+                {post.tags && post.tags.length > 0 && (
+                  <p className="text-xs text-primary font-medium mt-1">
+                    {post.tags.map((t) => `#${t}`).join(" ")}
+                  </p>
+                )}
+              </div>
             </div>
+          </div>
+
+          {/* Comments Header */}
+          <SheetHeader className="px-3 py-2 border-b">
+            <SheetTitle className="text-base">Comments</SheetTitle>
+          </SheetHeader>
+
+          {/* Comments List */}
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+            {commentsLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : comments && comments.length > 0 ? (
+              comments.map((comment) => (
+                <div key={comment.id} className="flex gap-2">
+                  <img
+                    src={comment.profiles?.avatar_url || AVATAR_FALLBACK}
+                    alt={comment.profiles?.username || "User"}
+                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                  />
+                  <div>
+                    <p className="text-sm">
+                      <span className="font-semibold">{comment.profiles?.username || "Unknown"}</span>{" "}
+                      {comment.text}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {comment.created_at ? new Date(comment.created_at).toLocaleDateString() : ""}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No comments yet. Be the first!</p>
+            )}
+          </div>
+
+          {/* Comment Input */}
+          <div className="flex-shrink-0 flex gap-2 p-3 border-t">
+            <Input
+              placeholder="Add a comment..."
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
+              disabled={addComment.isPending}
+            />
+            <Button onClick={handleAddComment} disabled={addComment.isPending || !commentText.trim()}>
+              {addComment.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Post"}
+            </Button>
           </div>
         </SheetContent>
       </Sheet>

@@ -1,30 +1,119 @@
-import { Search, SlidersHorizontal, MapPin, Camera } from "lucide-react";
-import { useRef, useState } from "react";
+import { Search, Globe } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import SectionHeader from "@/components/SectionHeader";
-import PlantMiniCard from "@/components/PlantMiniCard";
-import LiveCard from "@/components/LiveCard";
-
+import PlantLibraryCard from "@/components/PlantLibraryCard";
 import PlantScanSheet from "@/components/PlantScanSheet";
 import { identifyPlant } from "@/lib/plantnet";
 import type { PlantSuggestion } from "@/lib/plantnet";
-import { useLiveStreams } from "@/queries/liveStreams";
-import { usePlants } from "@/queries/plants";
+import { usePlantLibrarySearch } from "@/queries/plantLibrary";
+import type { PlantLibraryEntry } from "@/queries/plantLibrary";
 
 const categories = ["All", "Indoor", "Succulents", "Rare", "Propagation", "Gardening", "Tropical", "Cacti"];
 
+// Map categories to search terms for filtering
+const categorySearchTerms: Record<string, string> = {
+  All: "",
+  Indoor: "indoor",
+  Succulents: "succulent",
+  Rare: "rare",
+  Propagation: "propagation",
+  Gardening: "garden",
+  Tropical: "tropical",
+  Cacti: "cactus",
+};
+
 export default function ExplorePage() {
+  const navigate = useNavigate();
   const [active, setActive] = useState("All");
-  const scanInputRef = useRef<HTMLInputElement>(null);
-  const [scanning, setScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [scanResults, setScanResults] = useState<PlantSuggestion[] | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<PlantSuggestion[] | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+  const [onlineResults, setOnlineResults] = useState<PlantLibraryEntry[]>([]);
+  const scanInputRef = useRef<HTMLInputElement>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-  // Query hooks for real data
-  const { data: liveStreams = [] } = useLiveStreams();
-  const { data: plants = [] } = usePlants();
+  // Determine what query to use (search or category)
+  const effectiveQuery = searchQuery.trim() || categorySearchTerms[active] || "";
 
+  // Debounce search query
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
+
+  // Query the plant library
+  const { data: libraryResults = [], isLoading: isLibraryLoading } = usePlantLibrarySearch(
+    effectiveQuery.length > 1 ? effectiveQuery : ""
+  );
+
+  // Show loading skeletons when searching
+  const isLoading = isLibraryLoading || isSearchingOnline;
+
+  // Determine if we should show "no results" with online search option
+  const showOnlineSearch =
+    effectiveQuery.length >= 2 &&
+    !isLoading &&
+    libraryResults.length === 0 &&
+    onlineResults.length === 0;
+
+  // Handle search online
+  const handleSearchOnline = async () => {
+    if (!effectiveQuery.trim()) return;
+
+    setIsSearchingOnline(true);
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plant-lookup`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: effectiveQuery }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to search online");
+      }
+
+      const data = await response.json();
+
+      if (data && data.result) {
+        const result = data.result;
+        setOnlineResults([result]);
+
+        // Invalidate the library query to refetch
+        // The queryClient will be invalidated via react-query
+        // For now, the results are shown directly
+      } else {
+        toast.error("No results found online either");
+      }
+    } catch (err) {
+      toast.error("Failed to search online. Please try again.");
+      console.error(err);
+    } finally {
+      setIsSearchingOnline(false);
+    }
+  };
+
+  // Handle scan
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -40,9 +129,21 @@ export default function ExplorePage() {
     } finally {
       setScanning(false);
     }
-    // Reset input so same file can be selected again
     e.target.value = "";
   };
+
+  // Handle clear search
+  const handleClearSearch = () => {
+    setSearchQuery("");
+    setOnlineResults([]);
+  };
+
+  // All results to display (library + online)
+  const displayResults =
+    onlineResults.length > 0 ? onlineResults : libraryResults;
+
+  // Show popular plants when no search/filter active
+  const showPopular = effectiveQuery.length < 2 && active === "All";
 
   return (
     <div className="pb-20 md:pb-4 min-h-screen">
@@ -51,19 +152,30 @@ export default function ExplorePage() {
         <h1 className="text-xl font-bold mb-3">Explore</h1>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Plants, communities, challenges..."
-              className="w-full bg-muted rounded-xl pl-10 pr-4 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            <Search
+              size={18}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
+            <input
+              type="search"
+              placeholder="Search species or care guides..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setOnlineResults([]);
+              }}
+              className="w-full bg-muted rounded-xl pl-10 pr-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            {searchQuery && (
+              <button
+                onClick={handleClearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
           </div>
-          <button className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center" aria-label="Filters">
-            <SlidersHorizontal size={18} className="text-foreground" />
-          </button>
-          <button className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center" aria-label="Map view">
-            <MapPin size={18} className="text-foreground" />
-          </button>
         </div>
       </div>
 
@@ -72,7 +184,13 @@ export default function ExplorePage() {
         {categories.map((cat) => (
           <button
             key={cat}
-            onClick={() => setActive(cat)}
+            onClick={() => {
+              setActive(cat);
+              if (cat !== "All") {
+                setSearchQuery("");
+                setOnlineResults([]);
+              }
+            }}
             className={active === cat ? "chip-active" : "chip"}
           >
             {cat}
@@ -80,31 +198,122 @@ export default function ExplorePage() {
         ))}
       </div>
 
-      {/* AI Plant ID banner */}
-      <div className="mx-4 mb-4 gradient-leaf rounded-2xl p-4 flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-          <Camera size={24} className="text-primary-foreground" />
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-bold text-primary-foreground">Identify Any Plant</p>
-          <p className="text-xs text-primary-foreground/80">Point your camera and get instant AI identification</p>
-        </div>
-        <button
-          onClick={() => scanInputRef.current?.click()}
-          className="px-4 py-2 bg-primary-foreground/20 backdrop-blur-sm rounded-full text-xs font-bold text-primary-foreground"
-        >
-          Scan
-        </button>
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          ref={scanInputRef}
-          onChange={handleScan}
-          className="hidden"
-        />
-      </div>
+      {/* Results section */}
+      {effectiveQuery.length >= 2 || active !== "All" ? (
+        <>
+          <SectionHeader
+            title={
+              isLoading
+                ? "Searching..."
+                : displayResults.length > 0
+                ? `Results (${displayResults.length})`
+                : "Results"
+            }
+          />
 
+          {isLoading ? (
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-card rounded-2xl overflow-hidden animate-pulse"
+                >
+                  <div className="aspect-square bg-muted" />
+                  <div className="p-2.5 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : displayResults.length > 0 ? (
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+              {displayResults.map((entry) => (
+                <PlantLibraryCard key={entry.id} entry={entry} />
+              ))}
+            </div>
+          ) : showOnlineSearch ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <Globe size={48} className="text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground text-center mb-4">
+                No results found in our library for "{effectiveQuery}"
+              </p>
+              <button
+                onClick={handleSearchOnline}
+                className="px-6 py-3 rounded-xl gradient-leaf text-primary-foreground font-semibold shadow-card hover:shadow-elevated transition-shadow"
+              >
+                Search online
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <p className="text-sm text-muted-foreground text-center">
+                No results found. Try a different search term.
+              </p>
+            </div>
+          )}
+        </>
+      ) : showPopular ? (
+        <>
+          {/* Popular Plants - from plant library */}
+          <SectionHeader
+            title="Popular Plants 🌿"
+            subtitle="Curated care guides"
+          />
+
+          {isLibraryLoading ? (
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-card rounded-2xl overflow-hidden animate-pulse"
+                >
+                  <div className="aspect-square bg-muted" />
+                  <div className="p-2.5 space-y-2">
+                    <div className="h-4 bg-muted rounded w-3/4" />
+                    <div className="h-3 bg-muted rounded w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : libraryResults.length > 0 ? (
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+              {libraryResults.slice(0, 12).map((entry) => (
+                <PlantLibraryCard key={entry.id} entry={entry} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <p className="text-sm text-muted-foreground text-center">
+                No plants in library yet. Search for a species to get started!
+              </p>
+            </div>
+          )}
+
+          {/* Quick start: scan to identify */}
+          <div className="mx-4 mt-4 p-4 bg-muted/50 rounded-2xl">
+            <p className="text-sm text-muted-foreground text-center">
+              Have a plant you want to learn about?{" "}
+              <button
+                onClick={() => scanInputRef.current?.click()}
+                className="text-primary font-semibold hover:underline"
+              >
+                Scan to identify
+              </button>
+            </p>
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              ref={scanInputRef}
+              onChange={handleScan}
+              className="hidden"
+            />
+          </div>
+        </>
+      ) : null}
+
+      {/* Plant Scan Sheet */}
       <PlantScanSheet
         open={scanOpen}
         onOpenChange={(open) => {
@@ -116,55 +325,11 @@ export default function ExplorePage() {
         }}
         results={scanResults}
         loading={scanning}
+        onViewGuide={(speciesName) => {
+          setScanOpen(false);
+          setSearchQuery(speciesName);
+        }}
       />
-
-      {/* Live Streams */}
-      <SectionHeader title="🔴 Live Now" actionPath="/live" />
-      {liveStreams.length === 0 ? (
-        <div className="flex gap-3 px-4 pb-2">
-          <p className="text-sm text-muted-foreground">No live streams yet. Check back soon!</p>
-        </div>
-      ) : (
-        <div className="flex gap-3 px-4 overflow-x-auto pb-2 scrollbar-hide md:grid md:grid-cols-3 md:overflow-visible lg:grid-cols-4">
-          {liveStreams.slice(0, 6).map((stream) => (
-            <LiveCard
-              key={stream.id}
-              image={stream.thumbnail_url ?? "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=300&fit=crop"}
-              title={stream.title}
-              host={stream.profiles?.username ?? stream.profiles?.display_name ?? "Host"}
-              hostAvatar={stream.profiles?.avatar_url ?? "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face"}
-              viewers={stream.viewer_count ?? 0}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Plant Directory */}
-      <SectionHeader title="Popular Plants 🌿" actionPath="/" />
-      {plants.length === 0 ? (
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-          <p className="text-sm text-muted-foreground col-span-full py-8 text-center">No plants yet. Add your first plant!</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-          {plants.slice(0, 10).map((plant) => (
-            <PlantMiniCard
-              key={plant.id}
-              image={plant.image_url ?? "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=400&fit=crop"}
-              name={plant.nickname ?? plant.name}
-              species={plant.species ?? ""}
-              waterDays={plant.water_frequency_days ?? 7}
-              healthPercent={plant.health_score ?? 80}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Challenges */}
-      <SectionHeader title="Challenges 🏆" />
-      <div className="flex gap-3 px-4 pb-4">
-        <p className="text-sm text-muted-foreground">Challenges coming soon! Join the community to participate.</p>
-      </div>
     </div>
   );
 }

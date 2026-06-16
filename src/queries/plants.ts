@@ -77,6 +77,7 @@ export function useAddPlant() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plants"] });
+      queryClient.invalidateQueries({ queryKey: ["careTasks"] });
     },
   });
 }

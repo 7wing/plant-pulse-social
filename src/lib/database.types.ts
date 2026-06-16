@@ -22,6 +22,8 @@ export type Database = {
           logged_at: string | null
           notes: string | null
           plant_id: string | null
+          scheduled_due: string | null
+          task_id: string | null
           user_id: string | null
         }
         Insert: {
@@ -31,6 +33,8 @@ export type Database = {
           logged_at?: string | null
           notes?: string | null
           plant_id?: string | null
+          scheduled_due?: string | null
+          task_id?: string | null
           user_id?: string | null
         }
         Update: {
@@ -40,6 +44,8 @@ export type Database = {
           logged_at?: string | null
           notes?: string | null
           plant_id?: string | null
+          scheduled_due?: string | null
+          task_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -51,7 +57,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "care_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "care_tasks"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "care_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      care_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          due_date: string | null
+          id: string
+          is_recurring: boolean | null
+          plant_id: string | null
+          repeat_interval: number | null
+          repeat_unit: string | null
+          task_name: string
+          task_type: string
+          user_id: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          plant_id?: string | null
+          repeat_interval?: number | null
+          repeat_unit?: string | null
+          task_name: string
+          task_type: string
+          user_id?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          plant_id?: string | null
+          repeat_interval?: number | null
+          repeat_unit?: string | null
+          task_name?: string
+          task_type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_tasks_plant_id_fkey"
+            columns: ["plant_id"]
+            isOneToOne: false
+            referencedRelation: "plants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_tasks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -99,6 +169,42 @@ export type Database = {
           },
         ]
       }
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_users_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blocked_users_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenges: {
         Row: {
           created_at: string | null
@@ -106,8 +212,14 @@ export type Database = {
           ends_at: string | null
           id: string
           image_url: string | null
+          is_virtual: boolean | null
+          location: string | null
           participants_count: number | null
+          proposer_id: string | null
+          starts_at: string | null
+          status: string | null
           title: string
+          type: string | null
         }
         Insert: {
           created_at?: string | null
@@ -115,8 +227,14 @@ export type Database = {
           ends_at?: string | null
           id?: string
           image_url?: string | null
+          is_virtual?: boolean | null
+          location?: string | null
           participants_count?: number | null
+          proposer_id?: string | null
+          starts_at?: string | null
+          status?: string | null
           title: string
+          type?: string | null
         }
         Update: {
           created_at?: string | null
@@ -124,10 +242,24 @@ export type Database = {
           ends_at?: string | null
           id?: string
           image_url?: string | null
+          is_virtual?: boolean | null
+          location?: string | null
           participants_count?: number | null
+          proposer_id?: string | null
+          starts_at?: string | null
+          status?: string | null
           title?: string
+          type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "challenges_proposer_id_fkey"
+            columns: ["proposer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       comments: {
         Row: {
@@ -353,6 +485,57 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string | null
+          id: string
+          message: string | null
+          metadata: Json | null
+          read: boolean | null
+          title: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          read?: boolean | null
+          title?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string | null
+          metadata?: Json | null
+          read?: boolean | null
+          title?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plants: {
         Row: {
           acquired_at: string | null
@@ -362,6 +545,7 @@ export type Database = {
           image_url: string | null
           last_watered_at: string | null
           light_requirement: string | null
+          location: string | null
           next_water_at: string | null
           nickname: string
           notes: string | null
@@ -378,6 +562,7 @@ export type Database = {
           image_url?: string | null
           last_watered_at?: string | null
           light_requirement?: string | null
+          location?: string | null
           next_water_at?: string | null
           nickname: string
           notes?: string | null
@@ -394,6 +579,7 @@ export type Database = {
           image_url?: string | null
           last_watered_at?: string | null
           light_requirement?: string | null
+          location?: string | null
           next_water_at?: string | null
           nickname?: string
           notes?: string | null
@@ -412,40 +598,88 @@ export type Database = {
           },
         ]
       }
+      plant_library: {
+        Row: {
+          common_name: string | null
+          created_at: string | null
+          description: string | null
+          difficulty: string | null
+          id: string
+          image_url: string | null
+          light: string | null
+          source: string | null
+          species_name: string | null
+          toxicity: string | null
+          water: string | null
+        }
+        Insert: {
+          common_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id?: string
+          image_url?: string | null
+          light?: string | null
+          source?: string | null
+          species_name?: string | null
+          toxicity?: string | null
+          water?: string | null
+        }
+        Update: {
+          common_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string | null
+          id?: string
+          image_url?: string | null
+          light?: string | null
+          source?: string | null
+          species_name?: string | null
+          toxicity?: string | null
+          water?: string | null
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           author_id: string | null
           caption: string | null
+          challenge_id: string | null
           comments_count: number | null
           created_at: string | null
           id: string
           image_url: string | null
           is_sponsored: boolean | null
           likes_count: number | null
+          media_urls: string[] | null
           plant_id: string | null
           tags: string[] | null
         }
         Insert: {
           author_id?: string | null
           caption?: string | null
+          challenge_id?: string | null
           comments_count?: number | null
           created_at?: string | null
           id?: string
           image_url?: string | null
           is_sponsored?: boolean | null
           likes_count?: number | null
+          media_urls?: string[] | null
           plant_id?: string | null
           tags?: string[] | null
         }
         Update: {
           author_id?: string | null
           caption?: string | null
+          challenge_id?: string | null
           comments_count?: number | null
           created_at?: string | null
           id?: string
           image_url?: string | null
           is_sponsored?: boolean | null
           likes_count?: number | null
+          media_urls?: string[] | null
           plant_id?: string | null
           tags?: string[] | null
         }
@@ -455,6 +689,13 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
             referencedColumns: ["id"]
           },
           {
@@ -502,6 +743,42 @@ export type Database = {
           },
         ]
       }
+      saved_guides: {
+        Row: {
+          created_at: string | null
+          id: string
+          plant_library_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          plant_library_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          plant_library_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_guides_plant_library_id_fkey"
+            columns: ["plant_library_id"]
+            isOneToOne: false
+            referencedRelation: "plant_library"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_guides_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -511,8 +788,16 @@ export type Database = {
           followers_count: number | null
           following_count: number | null
           id: string
+          interests: string[] | null
           location: string | null
+          location_hidden: boolean | null
           plants_count: number | null
+          role: string | null
+          settings_care_reminders: boolean | null
+          settings_challenge_notifications: boolean | null
+          settings_social_notifications: boolean | null
+          status: string | null
+          suspended_until: string | null
           username: string
         }
         Insert: {
@@ -523,8 +808,16 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id: string
+          interests?: string[] | null
           location?: string | null
+          location_hidden?: boolean | null
           plants_count?: number | null
+          role?: string | null
+          settings_care_reminders?: boolean | null
+          settings_challenge_notifications?: boolean | null
+          settings_social_notifications?: boolean | null
+          status?: string | null
+          suspended_until?: string | null
           username: string
         }
         Update: {
@@ -535,11 +828,72 @@ export type Database = {
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          interests?: string[] | null
           location?: string | null
+          location_hidden?: boolean | null
           plants_count?: number | null
+          role?: string | null
+          settings_care_reminders?: boolean | null
+          settings_challenge_notifications?: boolean | null
+          settings_social_notifications?: boolean | null
+          status?: string | null
+          suspended_until?: string | null
           username?: string
         }
         Relationships: []
+      }
+      proposals: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_virtual: boolean | null
+          location: string | null
+          moderator_note: string | null
+          proposed_options: Json | null
+          scheduled_at: string | null
+          status: string | null
+          submitter_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_virtual?: boolean | null
+          location?: string | null
+          moderator_note?: string | null
+          proposed_options?: Json | null
+          scheduled_at?: string | null
+          status?: string | null
+          submitter_id?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_virtual?: boolean | null
+          location?: string | null
+          moderator_note?: string | null
+          proposed_options?: Json | null
+          scheduled_at?: string | null
+          status?: string | null
+          submitter_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_submitter_id_fkey"
+            columns: ["submitter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_tokens: {
         Row: {
@@ -566,6 +920,105 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string | null
+          id: string
+          moderator_note: string | null
+          reason: string | null
+          reporter_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string | null
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          moderator_note?: string | null
+          reason?: string | null
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          moderator_note?: string | null
+          reason?: string | null
+          reporter_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      violations: {
+        Row: {
+          action: string
+          created_at: string | null
+          created_by: string | null
+          duration_hours: number | null
+          id: string
+          reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          created_by?: string | null
+          duration_hours?: number | null
+          id?: string
+          reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          created_by?: string | null
+          duration_hours?: number | null
+          id?: string
+          reason?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "violations_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "violations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"

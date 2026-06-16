@@ -311,6 +311,34 @@ export function useLikedPosts() {
   });
 }
 
+// Get posts filtered by challenge tag
+interface UseChallengePostsParams {
+  challengeId?: string;
+  tag?: string;
+  limit?: number;
+}
+
+export function useChallengePosts(challengeId?: string, tag?: string, limit = 20) {
+  return useQuery({
+    queryKey: ["challengePosts", challengeId, tag],
+    queryFn: async () => {
+      if (!tag) return [];
+
+      // Search for posts that contain the tag in their tags array
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*, profiles:author_id(username, avatar_url, display_name)")
+        .contains("tags", [tag])
+        .order("created_at", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return (data ?? []) as PostWithAuthor[];
+    },
+    enabled: !!tag,
+  });
+}
+
 export interface PostLiker {
   id: string;
   username: string;

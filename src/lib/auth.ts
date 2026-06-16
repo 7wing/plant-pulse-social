@@ -36,3 +36,11 @@ export const signInWithGoogle = () =>
       redirectTo: `${window.location.origin}/auth/callback`,
     },
   })
+
+export const signInWithApple = () =>
+  supabase.auth.signInWithOAuth({
+    provider: 'apple',
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  })
