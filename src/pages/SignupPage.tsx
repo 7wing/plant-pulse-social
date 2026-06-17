@@ -3,13 +3,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { Leaf, Mail, Lock, User, Chrome, Apple, CheckCircle } from "lucide-react";
+import { Leaf, Mail, Lock, User, Chrome, Apple, CheckCircle, Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { signUp, signInWithGoogle } from "@/lib/auth";
+import { Card, CardContent } from "@/components/ui/card";
+import { signUp, signInWithGoogle, signInWithApple } from "@/lib/auth";
 
 const schema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters").max(20, "Username must be 20 characters or less"),
@@ -23,6 +23,7 @@ export default function SignupPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [confirmationPending, setConfirmationPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -38,10 +39,8 @@ export default function SignupPage() {
     try {
       const result = await signUp(data.email, data.password, data.username);
       if (result.session) {
-        // Immediate session — email confirmation is disabled
         navigate("/");
       } else if (result.user) {
-        // User created but session is null — email confirmation required
         setConfirmationPending(true);
       }
     } catch (err) {
@@ -58,9 +57,18 @@ export default function SignupPage() {
     }
   };
 
+  const handleAppleSignIn = async () => {
+    setError(null);
+    try {
+      await signInWithApple();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to sign in with Apple");
+    }
+  };
+
   if (confirmationPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-start pt-6 pb-8 sm:justify-center sm:pt-0 sm:pb-0 px-4 bg-background overflow-y-auto md:-mt-20">
         <div className="w-full max-w-sm text-center">
           <div className="flex flex-col items-center mb-8">
             <div className="w-14 h-14 rounded-2xl gradient-leaf flex items-center justify-center shadow-fab mb-3">
@@ -94,10 +102,10 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <div className="w-full max-w-sm">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-start pt-6 pb-8 sm:justify-center sm:pt-0 sm:pb-0 px-4 bg-background overflow-y-auto md:-mt-20">
+      <div className="w-full max-w-sm md:max-w-3xl space-y-8">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center">
           <div className="w-14 h-14 rounded-2xl gradient-leaf flex items-center justify-center shadow-fab mb-3">
             <Leaf size={28} className="text-primary-foreground" />
           </div>
@@ -105,21 +113,54 @@ export default function SignupPage() {
           <p className="text-sm text-muted-foreground mt-1">Care for your plants, together</p>
         </div>
 
-        <Card className="border-border shadow-card">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-lg">Create Account</CardTitle>
-            <CardDescription>
-              Enter your details to get started
-            </CardDescription>
-          </CardHeader>
+        {error && (
+          <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {error}
+          </div>
+        )}
 
-          <CardContent className="space-y-4">
-            {error && (
-              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                {error}
-              </div>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-8 md:gap-10 items-start">
+          {/* Social Sign Up */}
+          <div className="space-y-5 order-1">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide text-center md:text-left">
+              Sign up with
+            </h2>
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 justify-start"
+                onClick={handleGoogleSignIn}
+              >
+                <Chrome size={18} />
+                <span className="flex-1 text-left">Continue with Google</span>
+              </Button>
 
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 justify-start"
+                onClick={handleAppleSignIn}
+              >
+                <Apple size={18} />
+                <span className="flex-1 text-left">Continue with Apple</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="flex items-center justify-center md:flex-col md:items-center md:pt-8 order-2">
+            <div className="w-full border-t border-border md:border-t-0 md:border-l md:h-full md:w-0 md:min-h-[120px]" />
+            <span className="px-3 text-xs uppercase text-muted-foreground whitespace-nowrap bg-background md:absolute">
+              or
+            </span>
+          </div>
+
+          {/* Email Sign Up */}
+          <div className="space-y-5 order-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide text-center md:text-left">
+              Create with email
+            </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
@@ -161,11 +202,19 @@ export default function SignupPage() {
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     {...register("password")}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
                 {errors.password && (
                   <p className="text-xs text-destructive">{errors.password.message}</p>
@@ -180,56 +229,21 @@ export default function SignupPage() {
                 {isSubmitting ? "Creating account..." : "Sign Up"}
               </Button>
             </form>
+          </div>
+        </div>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or</span>
-              </div>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={handleGoogleSignIn}
+        {/* Footer */}
+        <div className="text-center pt-2">
+          <p className="text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <button
+              onClick={() => navigate("/login")}
+              className="text-primary font-medium hover:underline"
             >
-              <Chrome size={16} />
-              Continue with Google
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={async () => {
-                setError(null);
-                try {
-                  await signInWithApple();
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : "Failed to sign in with Apple");
-                }
-              }}
-            >
-              <Apple size={16} />
-              Continue with Apple
-            </Button>
-          </CardContent>
-
-          <CardFooter className="flex justify-center">
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <button
-                onClick={() => navigate("/login")}
-                className="text-primary font-medium hover:underline"
-              >
-                Sign in
-              </button>
-            </p>
-          </CardFooter>
-        </Card>
+              Sign in
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

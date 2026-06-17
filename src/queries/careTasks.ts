@@ -173,6 +173,7 @@ export function useCareTasks(plantId?: string) {
       return (data ?? []) as CareTaskWithPlant[];
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

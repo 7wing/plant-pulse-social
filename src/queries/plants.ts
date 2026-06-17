@@ -23,6 +23,7 @@ export function usePlants() {
       return data ?? [];
     },
     enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

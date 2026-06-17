@@ -1,5 +1,5 @@
 import { Check, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo } from "react";
 import { getTaskTypeIcon, formatDueDate } from "@/queries/careTasks";
 import type { CareTaskWithPlant } from "@/queries/careTasks";
 import { cn } from "@/lib/utils";
@@ -12,10 +12,15 @@ interface CareTaskCardProps {
 
 function CareTaskCard({ task, onComplete, isCompleting }: CareTaskCardProps) {
   const isCompleted = !!task.completed_at;
-  const dueText = isCompleted && task.completed_at 
-    ? `completed ${formatDueDate(task.completed_at)}`
-    : formatDueDate(task.due_date);
-  const taskIcon = getTaskTypeIcon(task.task_type);
+
+  const dueText = useMemo(() => {
+    const text = isCompleted && task.completed_at
+      ? `completed ${formatDueDate(task.completed_at)}`
+      : formatDueDate(task.due_date);
+    return text;
+  }, [isCompleted, task.completed_at, task.due_date]);
+
+  const taskIcon = useMemo(() => getTaskTypeIcon(task.task_type), [task.task_type]);
   const plantName = task.plants?.nickname || "Unknown plant";
 
   const handleClick = () => {

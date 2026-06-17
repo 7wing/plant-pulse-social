@@ -1,0 +1,89 @@
+[initial-load]
+{
+  "loadTimeMs": 2151,
+  "requestCount": 14,
+  "requests": [
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/profiles",
+      "method": "GET",
+      "durationMs": 609,
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5173/src/lib/supabase.ts",
+      "method": "GET",
+      "durationMs": 22,
+      "status": 304
+    },
+    {
+      "url": "http://localhost:5173/node_modules/.vite/deps/@supabase_supabase-js.js",
+      "method": "GET",
+      "durationMs": 0,
+      "status": 200
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/profiles",
+      "method": "GET",
+      "durationMs": 543,
+      "status": 200
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/profiles",
+      "method": "GET"
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/notifications",
+      "method": "HEAD",
+      "durationMs": 281,
+      "status": 404
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/notifications",
+      "method": "GET",
+      "durationMs": 278,
+      "status": 404
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/plants",
+      "method": "GET",
+      "durationMs": 367,
+      "status": 200
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/care_tasks",
+      "method": "GET",
+      "durationMs": 303,
+      "status": 404
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/profiles",
+      "method": "GET",
+      "durationMs": 365,
+      "status": 200
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/notifications",
+      "method": "GET",
+      "durationMs": 94,
+      "status": 404
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/care_tasks",
+      "method": "GET",
+      "durationMs": 92,
+      "status": 404
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/notifications",
+      "method": "GET",
+      "durationMs": 94,
+      "status": 404
+    },
+    {
+      "url": "https://kjmgtctcwwqsrepoldor.supabase.co/rest/v1/care_tasks",
+      "method": "GET",
+      "durationMs": 94,
+      "status": 404
+    }
+  ]
+}

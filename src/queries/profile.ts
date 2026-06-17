@@ -22,6 +22,7 @@ export function useProfile(userId?: string) {
       return data
     },
     enabled: !!targetId,
+    staleTime: 5 * 60 * 1000,
   })
 }
 

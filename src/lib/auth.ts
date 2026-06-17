@@ -44,3 +44,5 @@ export const signInWithApple = () =>
       redirectTo: `${window.location.origin}/auth/callback`,
     },
   })
+
+

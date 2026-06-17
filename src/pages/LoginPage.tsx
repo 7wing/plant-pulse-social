@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
-import { Leaf, Mail, Lock, Chrome, Apple } from "lucide-react";
+import { Leaf, Mail, Lock, Chrome, Apple, Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ type LoginForm = z.infer<typeof schema>;
 export default function LoginPage() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -60,10 +60,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <div className="w-full max-w-sm space-y-6">
+    <div className="min-h-[100dvh] flex flex-col items-center justify-start pt-6 pb-8 sm:justify-center sm:pt-0 sm:pb-0 px-4 bg-background overflow-y-auto md:-mt-20">
+      <div className="w-full max-w-sm md:max-w-3xl space-y-8">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
+        <div className="flex flex-col items-center">
           <div className="w-14 h-14 rounded-2xl gradient-leaf flex items-center justify-center shadow-fab mb-3">
             <Leaf size={28} className="text-primary-foreground" />
           </div>
@@ -77,57 +77,48 @@ export default function LoginPage() {
           </div>
         )}
 
-        {!showEmailForm ? (
-          <div className="space-y-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={handleGoogleSignIn}
-            >
-              <Chrome size={16} />
-              Continue with Google
-            </Button>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-8 md:gap-10 items-start">
+          {/* Social Login */}
+          <div className="space-y-5 order-1">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide text-center md:text-left">
+              Sign in with
+            </h2>
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 justify-start"
+                onClick={handleGoogleSignIn}
+              >
+                <Chrome size={18} />
+                <span className="flex-1 text-left">Continue with Google</span>
+              </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={handleAppleSignIn}
-            >
-              <Apple size={16} />
-              Continue with Apple
-            </Button>
-
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or</span>
-              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2 justify-start"
+                onClick={handleAppleSignIn}
+              >
+                <Apple size={18} />
+                <span className="flex-1 text-left">Continue with Apple</span>
+              </Button>
             </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => navigate("/signup")}
-            >
-              <Mail size={16} />
-              Sign up with email
-            </Button>
-
-            <Button
-              type="button"
-              className="w-full gradient-leaf text-primary-foreground hover:opacity-90"
-              onClick={() => setShowEmailForm(true)}
-            >
-              Log in
-            </Button>
           </div>
-        ) : (
-          <div className="space-y-4">
+
+          {/* Divider */}
+          <div className="flex items-center justify-center md:flex-col md:items-center md:pt-8 order-2">
+            <div className="w-full border-t border-border md:border-t-0 md:border-l md:h-full md:w-0 md:min-h-[120px]" />
+            <span className="px-3 text-xs uppercase text-muted-foreground whitespace-nowrap bg-background md:absolute">
+              or
+            </span>
+          </div>
+
+          {/* Email Login */}
+          <div className="space-y-5 order-3">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide text-center md:text-left">
+              Email &amp; password
+            </h2>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -152,11 +143,19 @@ export default function LoginPage() {
                   <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     {...register("password")}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
                 {errors.password && (
                   <p className="text-xs text-destructive">{errors.password.message}</p>
@@ -171,17 +170,21 @@ export default function LoginPage() {
                 {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
             </form>
-
-            <Button
-              type="button"
-              variant="ghost"
-              className="w-full text-sm"
-              onClick={() => setShowEmailForm(false)}
-            >
-              Back to options
-            </Button>
           </div>
-        )}
+        </div>
+
+        {/* Footer */}
+        <div className="text-center pt-2">
+          <p className="text-sm text-muted-foreground">
+            Don&apos;t have an account?{" "}
+            <button
+              onClick={() => navigate("/signup")}
+              className="text-primary font-medium hover:underline"
+            >
+              Sign up
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );

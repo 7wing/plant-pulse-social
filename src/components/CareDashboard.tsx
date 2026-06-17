@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { usePlants } from "@/queries/plants";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/queries/profile";
@@ -25,36 +25,60 @@ export default function CareDashboard() {
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   const displayName = profile?.display_name || profile?.username || "Plant Parent";
 
-  // Tasks
-  const todayTasks = getTodayTasks(allTasks);
-  const upcomingTasks = getUpcomingTasks(allTasks);
-  const completedTasks = getCompletedTasks(allTasks).slice(0, 5);
-  const overdueTasks = getOverdueTasks(allTasks);
+  // Pre-build task lookup map to eliminate O(plants × tasks) filtering
+  const tasksByPlantId = useMemo(() => {
+    const map = new Map<string, CareTaskWithPlant[]>();
+    for (const task of allTasks) {
+      const list = map.get(task.plant_id) ?? [];
+      list.push(task);
+      map.set(task.plant_id, list);
+    }
+    return map;
+  }, [allTasks]);
 
-  // Stats
-  const totalPlants = plants.length;
-  const healthyPlants = plants.filter((plant) => {
-    const plantTasks = allTasks.filter((t) => t.plant_id === plant.id);
-    const plantOverdue = plantTasks.some((t) => {
-      if (t.completed_at) return false;
-      if (!t.due_date) return false;
-      return new Date(t.due_date) < new Date(new Date().setHours(0, 0, 0, 0));
-    });
-    return !plantOverdue;
-  }).length;
-  const needCarePlants = plants.filter((plant) => {
-    const plantTasks = allTasks.filter((t) => t.plant_id === plant.id);
-    return plantTasks.some((t) => {
-      if (t.completed_at) return false;
-      if (!t.due_date) return false;
-      const due = new Date(t.due_date);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      return due >= todayStart && due <= todayEnd;
-    }) || overdueTasks.some((t) => t.plant_id === plant.id);
-  }).length;
+  // Memoize derived task lists
+  const todayTasks = useMemo(() => getTodayTasks(allTasks), [allTasks]);
+  const upcomingTasks = useMemo(() => getUpcomingTasks(allTasks), [allTasks]);
+  const completedTasks = useMemo(() => getCompletedTasks(allTasks).slice(0, 5), [allTasks]);
+  const overdueTasks = useMemo(() => getOverdueTasks(allTasks), [allTasks]);
+
+  // Memoize stats using the pre-built map
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  const { totalPlants, healthyPlants, needCarePlants } = useMemo(() => {
+    const total = plants.length;
+
+    let healthy = 0;
+    let needCare = 0;
+
+    for (const plant of plants) {
+      const plantTasks = tasksByPlantId.get(plant.id) ?? [];
+
+      const hasOverdue = plantTasks.some((t) => {
+        if (t.completed_at) return false;
+        if (!t.due_date) return false;
+        return new Date(t.due_date) < todayStart;
+      });
+
+      const hasDueToday = plantTasks.some((t) => {
+        if (t.completed_at) return false;
+        if (!t.due_date) return false;
+        const due = new Date(t.due_date);
+        const todayEnd = new Date(todayStart);
+        todayEnd.setHours(23, 59, 59, 999);
+        return due >= todayStart && due <= todayEnd;
+      });
+
+      if (!hasOverdue) healthy++;
+      if (hasDueToday || hasOverdue) needCare++;
+    }
+
+    return { totalPlants: total, healthyPlants: healthy, needCarePlants: needCare };
+  }, [plants, tasksByPlantId, todayStart]);
 
   const handleCompleteTask = async (taskId: string) => {
     try {
@@ -190,8 +214,8 @@ export default function CareDashboard() {
         )}
       </div>
 
-      {/* Add Care Task Sheet */}
-      <AddCareTaskSheet open={addTaskOpen} onOpenChange={setAddTaskOpen} />
+      {/* Add Care Task Sheet — only mount when open */}
+      {addTaskOpen && <AddCareTaskSheet open={addTaskOpen} onOpenChange={setAddTaskOpen} />}
     </div>
   );
 }
