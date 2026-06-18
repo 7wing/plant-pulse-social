@@ -1,10 +1,9 @@
-import { Search, Globe, Grid3X3, List } from "lucide-react";
+import { Search, Globe } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import SectionHeader from "@/components/SectionHeader";
 import PlantLibraryCard from "@/components/PlantLibraryCard";
-import CareGuideCard from "@/components/CareGuideCard";
 import PlantScanSheet from "@/components/PlantScanSheet";
 import { identifyPlant } from "@/lib/plantnet";
 import type { PlantSuggestion } from "@/lib/plantnet";
@@ -28,7 +27,6 @@ const categorySearchTerms: Record<string, string> = {
 export default function ExplorePage() {
   const navigate = useNavigate();
   const [active, setActive] = useState("All");
-  const [view, setView] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
@@ -71,7 +69,6 @@ export default function ExplorePage() {
   const showOnlineSearch =
     effectiveQuery.length >= 2 &&
     !isLoading &&
-    !isLibraryLoading &&
     libraryResults.length === 0 &&
     onlineResults.length === 0;
 
@@ -109,7 +106,8 @@ export default function ExplorePage() {
         toast.error("No results found online either");
       }
     } catch (err) {
-      // silent failure
+      toast.error("Failed to search online. Please try again.");
+      console.error(err);
     } finally {
       setIsSearchingOnline(false);
     }
@@ -200,17 +198,6 @@ export default function ExplorePage() {
         ))}
       </div>
 
-      {/* Grid/List Toggle */}
-      <div className="flex items-center justify-end px-4 pb-2">
-        <button
-          onClick={() => setView(view === "grid" ? "list" : "grid")}
-          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-          aria-label="Toggle view"
-        >
-          {view === "grid" ? <List size={18} /> : <Grid3X3 size={18} />}
-        </button>
-      </div>
-
       {/* Results section */}
       {effectiveQuery.length >= 2 || active !== "All" ? (
         <>
@@ -240,19 +227,11 @@ export default function ExplorePage() {
               ))}
             </div>
           ) : displayResults.length > 0 ? (
-            view === "grid" ? (
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-                {displayResults.map((entry) => (
-                  <PlantLibraryCard key={entry.id} entry={entry} />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3 px-4 pb-4 max-w-3xl mx-auto">
-                {displayResults.map((entry) => (
-                  <CareGuideCard key={entry.id} entry={entry} />
-                ))}
-              </div>
-            )
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+              {displayResults.map((entry) => (
+                <PlantLibraryCard key={entry.id} entry={entry} />
+              ))}
+            </div>
           ) : showOnlineSearch ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <Globe size={48} className="text-muted-foreground mb-4" />
@@ -298,19 +277,11 @@ export default function ExplorePage() {
               ))}
             </div>
           ) : libraryResults.length > 0 ? (
-            view === "grid" ? (
-              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-                {libraryResults.slice(0, 12).map((entry) => (
-                  <PlantLibraryCard key={entry.id} entry={entry} />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3 px-4 pb-4 max-w-3xl mx-auto">
-                {libraryResults.slice(0, 12).map((entry) => (
-                  <CareGuideCard key={entry.id} entry={entry} />
-                ))}
-              </div>
-            )
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+              {libraryResults.slice(0, 12).map((entry) => (
+                <PlantLibraryCard key={entry.id} entry={entry} />
+              ))}
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <p className="text-sm text-muted-foreground text-center">
