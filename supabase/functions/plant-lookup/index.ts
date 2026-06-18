@@ -1,7 +1,101 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+// Helper to check if an image URL is a placeholder
+function isPlaceholderImage(url: string | null): boolean {
+  if (!url) return true;
+  return url.includes("upgrade_access.jpg") || url.includes("upgrade_access.png");
+}
+
+// Helper to strip "(group)" suffix from species names
+function cleanSpeciesName(name: string): string {
+  if (!name) return name;
+  return name.replace(/\s*\(group\)/gi, "").trim();
+}
+
+type ToxicityLevel = "high" | "moderate" | "low" | "none";
+
+interface ToxicityInfo {
+  pets: ToxicityLevel;
+  humans: boolean;
+  symptoms: string;
+  safe_placement: string;
+}
+
+const TOXICITY_MAP: Record<string, ToxicityInfo> = {
+  // Scientific names
+  "monstera deliciosa": { pets: "moderate", humans: true, symptoms: "Oral irritation, intense burning, drooling, vomiting, difficulty swallowing", safe_placement: "Keep on high shelves or hanging baskets out of reach of pets and children" },
+  "epipremnum aureum": { pets: "moderate", humans: true, symptoms: "Oral irritation, burning, drooling, vomiting, difficulty swallowing", safe_placement: "Hanging baskets or high shelves; toxic to cats and dogs" },
+  "sansevieria trifasciata": { pets: "moderate", humans: true, symptoms: "Nausea, vomiting, diarrhea if ingested; mild skin irritation", safe_placement: "Place where pets cannot chew leaves" },
+  "aloe vera": { pets: "moderate", humans: true, symptoms: "Vomiting, diarrhea, tremors; skin irritation from sap in some people", safe_placement: "Keep away from pets who may chew; safe for topical human use" },
+  "chlorophytum comosum": { pets: "low", humans: false, symptoms: "Mild gastrointestinal upset if large amounts eaten", safe_placement: "Generally safe; mild stomach upset possible if ingested by cats" },
+  "spathiphyllum": { pets: "moderate", humans: true, symptoms: "Oral burning, drooling, vomiting, difficulty swallowing", safe_placement: "Keep away from pets and children; very popular but toxic" },
+  "ficus elastica": { pets: "low", humans: true, symptoms: "Skin and eye irritation from milky sap; oral irritation if ingested", safe_placement: "Sap can irritate skin; place away from pets and children" },
+  "ficus lyrata": { pets: "low", humans: true, symptoms: "Oral irritation, skin irritation from sap", safe_placement: "Sap irritates skin and mouth; keep away from pets" },
+  "zamioculcas zamiifolia": { pets: "moderate", humans: true, symptoms: "Oral burning, swelling, vomiting; skin and eye irritation", safe_placement: "Highly toxic if ingested; keep well away from pets and children" },
+  "philodendron": { pets: "moderate", humans: true, symptoms: "Oral burning, drooling, vomiting, difficulty swallowing", safe_placement: "Keep on high shelves or hanging planters" },
+  "crassula ovata": { pets: "moderate", humans: true, symptoms: "Vomiting, lethargy, depression, incoordination in pets", safe_placement: "Toxic to cats and dogs; place out of reach" },
+  "calathea": { pets: "none", humans: false, symptoms: "Non-toxic; no symptoms expected", safe_placement: "Pet-safe and child-safe; can be placed at any height" },
+  "codiaeum variegatum": { pets: "moderate", humans: true, symptoms: "Oral irritation, vomiting, diarrhea; skin irritation from sap", safe_placement: "Sap is irritating; keep away from pets and children" },
+  "dracaena": { pets: "moderate", humans: true, symptoms: "Vomiting, diarrhea, drooling, weakness in pets", safe_placement: "Toxic to cats and dogs; place out of reach" },
+  "dracaena marginata": { pets: "moderate", humans: true, symptoms: "Vomiting, diarrhea, drooling, weakness in pets", safe_placement: "Toxic to cats and dogs; place out of reach" },
+  "hedera helix": { pets: "high", humans: true, symptoms: "Severe gastrointestinal upset, drooling, vomiting, diarrhea, difficulty breathing in severe cases", safe_placement: "Highly toxic to pets; should be kept completely out of reach or avoided" },
+  "chamaedorea elegans": { pets: "none", humans: false, symptoms: "Non-toxic; no symptoms expected", safe_placement: "Pet-safe; safe for any location in the home" },
+  "aglaonema": { pets: "moderate", humans: true, symptoms: "Oral irritation, drooling, vomiting, difficulty swallowing", safe_placement: "Keep on tables or shelves away from pets" },
+  "yucca": { pets: "moderate", humans: true, symptoms: "Vomiting, diarrhea, drooling if ingested", safe_placement: "Place away from pets and small children" },
+  "begonia": { pets: "low", humans: true, symptoms: "Mild gastrointestinal upset from tubers; skin irritation from juice", safe_placement: "Avoid placement where pets dig in soil" },
+  "phalaenopsis": { pets: "none", humans: false, symptoms: "Non-toxic; no symptoms expected", safe_placement: "Pet-safe; one of the safest flowering plants for homes with pets" },
+  "nephrolepis exaltata": { pets: "none", humans: false, symptoms: "Non-toxic to cats and dogs; safe", safe_placement: "Pet-safe fern; can be placed anywhere" },
+  "pachira aquatica": { pets: "none", humans: false, symptoms: "Non-toxic; no symptoms expected", safe_placement: "Pet-safe and child-safe" },
+  "alocasia": { pets: "high", humans: true, symptoms: "Severe oral irritation, swelling, vomiting, difficulty breathing; highly toxic", safe_placement: "Extremely toxic if ingested; keep completely away from pets and children" },
+  "anthurium": { pets: "moderate", humans: true, symptoms: "Oral irritation, burning, drooling, vomiting, difficulty swallowing", safe_placement: "Keep away from pets and children" },
+  "strelitzia reginae": { pets: "low", humans: true, symptoms: "Mild gastrointestinal upset if seeds or flowers ingested", safe_placement: "Mildly toxic; keep seeds away from pets" },
+  "strelitzia nicolai": { pets: "low", humans: true, symptoms: "Mild gastrointestinal upset if seeds or flowers ingested", safe_placement: "Mildly toxic; keep seeds away from pets" },
+  "cactus": { pets: "low", humans: true, symptoms: "Physical spines are the main hazard; mild nausea if ingested", safe_placement: "Keep away from children and pets due to spines" },
+  "eucalyptus": { pets: "moderate", humans: true, symptoms: "Vomiting, diarrhea, drooling, weakness if ingested", safe_placement: "Keep away from pets; eucalyptus oil is especially toxic" },
+  "lavandula": { pets: "low", humans: false, symptoms: "Mild nausea in cats if large amounts consumed; generally safe", safe_placement: "Generally safe but concentrated oil can be toxic to cats" },
+  // Missing species variants
+  "corymbia citriodora": { pets: "moderate", humans: true, symptoms: "Vomiting, diarrhea, drooling, weakness if ingested", safe_placement: "Keep away from pets; eucalyptus oil is especially toxic" },
+  "euphorbia trigona": { pets: "high", humans: true, symptoms: "Severe skin and eye irritation from milky sap; vomiting, diarrhea if ingested", safe_placement: "Highly toxic sap; keep completely away from pets and children" },
+  "yucca filamentosa": { pets: "moderate", humans: true, symptoms: "Vomiting, diarrhea, drooling if ingested", safe_placement: "Place away from pets and small children" },
+  "chlorophytum 'bonnie'": { pets: "low", humans: false, symptoms: "Mild gastrointestinal upset if large amounts eaten", safe_placement: "Generally safe; mild stomach upset possible" },
+  "begonia 'art hodes'": { pets: "low", humans: true, symptoms: "Mild gastrointestinal upset from tubers; skin irritation from juice", safe_placement: "Avoid placement where pets dig in soil" },
+  // Common name aliases
+  "monstera": { pets: "moderate", humans: true, symptoms: "Oral irritation, intense burning, drooling, vomiting", safe_placement: "Keep on high shelves or hanging baskets" },
+  "pothos": { pets: "moderate", humans: true, symptoms: "Oral irritation, burning, drooling, vomiting", safe_placement: "Hanging baskets or high shelves" },
+  "golden pothos": { pets: "moderate", humans: true, symptoms: "Oral irritation, burning, drooling, vomiting", safe_placement: "Hanging baskets or high shelves" },
+  "snake plant": { pets: "moderate", humans: true, symptoms: "Nausea, vomiting, diarrhea if ingested", safe_placement: "Place where pets cannot chew leaves" },
+  "spider plant": { pets: "low", humans: false, symptoms: "Mild gastrointestinal upset if large amounts eaten", safe_placement: "Generally safe; mild stomach upset possible" },
+  "peace lily": { pets: "moderate", humans: true, symptoms: "Oral burning, drooling, vomiting, difficulty swallowing", safe_placement: "Keep away from pets and children" },
+  "rubber plant": { pets: "low", humans: true, symptoms: "Skin and eye irritation from milky sap; oral irritation if ingested", safe_placement: "Sap can irritate skin" },
+  "fiddle leaf fig": { pets: "low", humans: true, symptoms: "Oral irritation, skin irritation from sap", safe_placement: "Sap irritates skin and mouth" },
+  "zz plant": { pets: "moderate", humans: true, symptoms: "Oral burning, swelling, vomiting; skin and eye irritation", safe_placement: "Highly toxic if ingested; keep well away from pets" },
+  "jade plant": { pets: "moderate", humans: true, symptoms: "Vomiting, lethargy, depression, incoordination in pets", safe_placement: "Toxic to cats and dogs" },
+  "croton": { pets: "moderate", humans: true, symptoms: "Oral irritation, vomiting, diarrhea; skin irritation from sap", safe_placement: "Sap is irritating" },
+  "english ivy": { pets: "high", humans: true, symptoms: "Severe GI upset, drooling, vomiting, diarrhea, difficulty breathing", safe_placement: "Highly toxic to pets" },
+  "parlor palm": { pets: "none", humans: false, symptoms: "Non-toxic; no symptoms expected", safe_placement: "Pet-safe" },
+  "chinese evergreen": { pets: "moderate", humans: true, symptoms: "Oral irritation, drooling, vomiting", safe_placement: "Keep on tables or shelves away from pets" },
+  "money tree": { pets: "none", humans: false, symptoms: "Non-toxic; no symptoms expected", safe_placement: "Pet-safe and child-safe" },
+  "boston fern": { pets: "none", humans: false, symptoms: "Non-toxic to cats and dogs", safe_placement: "Pet-safe fern" },
+  "bird of paradise": { pets: "low", humans: true, symptoms: "Mild gastrointestinal upset if seeds or flowers ingested", safe_placement: "Mildly toxic; keep seeds away from pets" },
+  "lavender": { pets: "low", humans: false, symptoms: "Mild nausea in cats if large amounts consumed", safe_placement: "Generally safe" },
+  "orchid": { pets: "none", humans: false, symptoms: "Non-toxic", safe_placement: "Pet-safe" },
+  "fern": { pets: "none", humans: false, symptoms: "Non-toxic", safe_placement: "Pet-safe" },
+  "succulent": { pets: "low", humans: true, symptoms: "Varies by species", safe_placement: "Check individual species toxicity" },
+  "cacti": { pets: "low", humans: true, symptoms: "Physical spines are main hazard", safe_placement: "Keep away from children and pets" },
+};
+
+// --- CORS preflight handler ---
+function corsResponse(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+}
+
 Deno.serve(async (req: Request) => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       headers: {
@@ -13,67 +107,40 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
+    return corsResponse(405, { error: "Method not allowed" });
   }
 
-  // Validate environment variables
+  // Environment variables
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const plantIdApiKey = Deno.env.get("PLANT_ID_API_KEY");
   const perenualApiKey = Deno.env.get("PERENUAL_API_KEY");
+  const opbClientId = Deno.env.get("OPENPLANTBOOK_CLIENT_ID");
+  const opbClientSecret = Deno.env.get("OPENPLANTBOOK_CLIENT_SECRET");
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    return new Response(JSON.stringify({ error: "Supabase configuration missing" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
+    return corsResponse(500, { error: "Supabase configuration missing" });
   }
 
-  if (!perenualApiKey) {
-    return new Response(JSON.stringify({ error: "Perenual API key missing" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
-  }
-
-  // Create service role client for admin operations
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Parse request body
+  // Parse body
   let body: { query?: string | null; imageBase64?: string | null };
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-    });
+    return corsResponse(400, { error: "Invalid JSON body" });
   }
 
   const { query, imageBase64 } = body;
-
-  // Must provide either query or imageBase64
-  if (!query && !imageBase64) {
-    return new Response(
-      JSON.stringify({ error: "Either 'query' or 'imageBase64' must be provided" }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      }
-    );
-  }
-
-  // Determine the search term (for library search)
   const searchTerm = query?.trim();
 
+  if (!searchTerm && !imageBase64) {
+    return corsResponse(400, { error: "Either 'query' or 'imageBase64' must be provided" });
+  }
+
   // ========================================
-  // STEP 1: Search plant_library first
+  // STEP 1: Search plant_library cache first
   // ========================================
   if (searchTerm) {
     const { data: libraryResults, error: libraryError } = await supabaseAdmin
@@ -82,49 +149,43 @@ Deno.serve(async (req: Request) => {
       .or(`species_name.ilike.%${searchTerm}%,common_name.ilike.%${searchTerm}%`)
       .limit(10);
 
-    if (libraryError) {
-      console.error("plant_library search error:", libraryError);
-    } else if (libraryResults && libraryResults.length > 0) {
-      // Filter to find best match
+    if (!libraryError && libraryResults && libraryResults.length > 0) {
       const exactMatch = libraryResults.find(
         (r) =>
           r.species_name?.toLowerCase() === searchTerm.toLowerCase() ||
           r.common_name?.toLowerCase() === searchTerm.toLowerCase()
       );
-
-      return new Response(
-        JSON.stringify({
-          found: true,
-          source: "library",
-          data: exactMatch || libraryResults[0],
-          alternatives: libraryResults,
-        }),
-        {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        }
-      );
+      const match = exactMatch || libraryResults[0];
+      return corsResponse(200, {
+        found: true,
+        source: "library",
+        data: {
+          ...match,
+          species_name: cleanSpeciesName(match.species_name),
+        },
+        alternatives: libraryResults,
+      });
     }
   }
 
-  // ========================================
-  // STEP 2: Not in library - use external APIs
-  // ========================================
+  // Variables to accumulate data from multiple sources
+  let speciesName = searchTerm || "";
+  let commonName: string | null = null;
+  let description: string | null = null;
+  let imageUrl: string | null = null;
+  let light: string | null = null;
+  let water: string | null = null;
+  let difficulty: string | null = null;
+  let toxicityInfo: ToxicityInfo | null = null;
 
-  let searchQuery = searchTerm;
   let plantIdCommonNames: string[] | null = null;
   let plantIdDescription: string | null = null;
 
-  // If image is provided, use Plant.id to identify the plant
-  if (imageBase64) {
-    if (!plantIdApiKey) {
-      return new Response(JSON.stringify({ error: "Plant.id API key missing for image identification" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      });
-    }
-
+  // ========================================
+  // STEP 2: Plant.id image identification (if image provided)
+  // ========================================
+  if (imageBase64 && plantIdApiKey) {
     try {
-      // Call Plant.id API v3 for identification
       const plantIdResponse = await fetch("https://api.plant.id/v3/identification", {
         method: "POST",
         headers: {
@@ -139,222 +200,406 @@ Deno.serve(async (req: Request) => {
         }),
       });
 
-      if (!plantIdResponse.ok) {
-        const errorText = await plantIdResponse.text();
-        console.error("Plant.id identification error:", errorText);
-        throw new Error("Plant.id identification failed");
-      }
+      if (plantIdResponse.ok) {
+        const plantIdData = await plantIdResponse.json();
+        const accessToken = plantIdData.access_token;
 
-      const plantIdData = await plantIdResponse.json();
-      const accessToken = plantIdData.access_token;
+        if (accessToken) {
+          let suggestions: unknown[] = [];
+          const maxAttempts = 10;
+          let attempts = 0;
 
-      if (!accessToken) {
-        throw new Error("No access token returned from Plant.id");
-      }
-
-      // Poll for results
-      let suggestions: unknown[] = [];
-      const maxAttempts = 10;
-      let attempts = 0;
-
-      while (attempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, 1500)); // Wait 1.5 seconds
-
-        const statusResponse = await fetch(
-          `https://api.plant.id/v3/identification/${accessToken}`,
-          {
-            headers: { "Api-Key": plantIdApiKey },
+          while (attempts < maxAttempts) {
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+            const statusResponse = await fetch(
+              `https://api.plant.id/v3/identification/${accessToken}`,
+              { headers: { "Api-Key": plantIdApiKey } }
+            );
+            if (statusResponse.ok) {
+              const statusData = await statusResponse.json();
+              if (statusData.result?.classification?.suggestions) {
+                suggestions = statusData.result.classification.suggestions;
+                break;
+              }
+            }
+            attempts++;
           }
-        );
 
-        if (!statusResponse.ok) {
-          attempts++;
-          continue;
-        }
-
-        const statusData = await statusResponse.json();
-
-        if (statusData.result?.classification?.suggestions) {
-          suggestions = statusData.result.classification.suggestions;
-          break;
-        }
-
-        attempts++;
-      }
-
-      if (suggestions.length === 0) {
-        return new Response(
-          JSON.stringify({ found: false, message: "Could not identify plant from image" }),
-          {
-            status: 404,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+          if (suggestions.length > 0) {
+            const top = suggestions[0] as {
+              name: string;
+              details?: { common_names?: string[] };
+              description?: string;
+              plant_details?: { wiki_description?: { value?: string } };
+            };
+            speciesName = cleanSpeciesName(top.name);
+            plantIdCommonNames = top.details?.common_names ?? null;
+            plantIdDescription =
+              top.description || top.plant_details?.wiki_description?.value || null;
           }
-        );
-      }
-
-      // Get top suggestion
-      const topSuggestion = suggestions[0];
-      searchQuery = topSuggestion.name;
-      plantIdCommonNames = topSuggestion.details?.common_names ?? null;
-      plantIdDescription =
-        topSuggestion.description ||
-        topSuggestion.plant_details?.wiki_description?.value ||
-        null;
-    } catch (error) {
-      console.error("Plant.id error:", error);
-      return new Response(
-        JSON.stringify({ found: false, message: "Image identification failed" }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
         }
-      );
+      }
+    } catch (err) {
+      console.error("Plant.id error:", err);
     }
   }
 
-  // Ensure we have a search query for Perenual
-  if (!searchQuery) {
-    return new Response(
-      JSON.stringify({ found: false, message: "No search query available" }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  // ========================================
+  // STEP 3: Perenual search FIRST (to get scientific name)
+  // ========================================
+  let perenualScientificName: string | null = null;
+  let perenualCommonName: string | null = null;
+  let perenualId: number | null = null;
+  if (perenualApiKey) {
+    try {
+      const perenualSearchRes = await fetch(
+        `https://perenual.com/api/species-list?key=${perenualApiKey}&q=${encodeURIComponent(searchTerm || speciesName)}`
+      );
+
+      if (perenualSearchRes.ok) {
+        const perenualSearchData = await perenualSearchRes.json();
+        if (perenualSearchData.data && perenualSearchData.data.length > 0) {
+          const firstMatch = perenualSearchData.data[0] as {
+            id?: number;
+            common_name?: string;
+            scientific_name?: string[];
+            default_image?: { regular_url?: string; original_url?: string; medium_url?: string };
+          };
+
+          perenualId = firstMatch.id ?? null;
+          perenualCommonName = firstMatch.common_name || null;
+          if (Array.isArray(firstMatch.scientific_name) && firstMatch.scientific_name.length > 0) {
+            perenualScientificName = firstMatch.scientific_name[0];
+          }
+
+          // Use Perenual scientific name - always prefer it over raw search term
+          if (perenualScientificName) {
+            speciesName = cleanSpeciesName(perenualScientificName);
+          }
+          if (perenualCommonName) {
+            commonName = perenualCommonName;
+          }
+
+          // Perenual free tier returns placeholder images - check and discard
+          const perenualImage =
+            firstMatch.default_image?.regular_url ||
+            firstMatch.default_image?.original_url ||
+            firstMatch.default_image?.medium_url ||
+            null;
+          if (perenualImage && !isPlaceholderImage(perenualImage)) {
+            imageUrl = perenualImage;
+          }
+
+          // Try details endpoint (paywalled on free tier — wrap in try/catch)
+          if (perenualId) {
+            try {
+              const detailsRes = await fetch(
+                `https://perenual.com/api/species/details/${perenualId}?key=${perenualApiKey}`
+              );
+              if (detailsRes.ok) {
+                const detailsData = await detailsRes.json();
+                if (!description) description = detailsData.description || null;
+                if (!light && detailsData.sunlight) {
+                  light = Array.isArray(detailsData.sunlight)
+                    ? detailsData.sunlight.join(", ")
+                    : detailsData.sunlight;
+                }
+                if (!water) water = detailsData.watering || null;
+                if (!difficulty) difficulty = detailsData.care_level || null;
+              }
+            } catch {
+              // Free tier blocks details — ignore
+            }
+          }
+        }
       }
-    );
+    } catch (err) {
+      console.error("Perenual error:", err);
+    }
   }
 
   // ========================================
-  // STEP 3: Search Perenual API
+  // STEP 3b: PlantFYI fallback (if Perenual returned 0 results)
+  // ========================================
+  if (!perenualId && searchTerm) {
+    try {
+      const plantfyiRes = await fetch(
+        `https://plantfyi.com/api/v1/search/?q=${encodeURIComponent(searchTerm)}`
+      );
+      if (plantfyiRes.ok) {
+        const plantfyiData = await plantfyiRes.json();
+        const match = (plantfyiData.results as Array<{ type?: string; name?: string; slug?: string }> | undefined)?.find(
+          (r) => r.type === "plant"
+        );
+        if (match) {
+          speciesName = cleanSpeciesName(match.name || speciesName);
+          const detailRes = await fetch(`https://plantfyi.com/api/v1/plants/${match.slug}/`);
+          if (detailRes.ok) {
+            const detail = await detailRes.json() as {
+              scientific_name?: string;
+              image_path?: string;
+            };
+            speciesName = cleanSpeciesName(detail.scientific_name || match.name || speciesName);
+            if (!imageUrl && detail.image_path) {
+              const plantfyiImage = `https://plantfyi.com/${detail.image_path}`;
+              // Verify image exists (HEAD request) before using
+              try {
+                const imgCheck = await fetch(plantfyiImage, { method: "HEAD" });
+                if (imgCheck.ok) imageUrl = plantfyiImage;
+              } catch { /* ignore */ }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("PlantFYI error:", err);
+    }
+  }
+
+  // ========================================
+  // STEP 4: OpenPlantbook (using scientific name from Perenual)
+  // ========================================
+  let openPlantbookData: Record<string, unknown> | null = null;
+  if (opbClientId && opbClientSecret) {
+    try {
+      const opbTokenRes = await fetch("https://open.plantbook.io/api/v1/token/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "client_credentials",
+          client_id: opbClientId,
+          client_secret: opbClientSecret,
+        }),
+      });
+
+      if (opbTokenRes.ok) {
+        const opbTokenData = await opbTokenRes.json();
+        const opbToken = opbTokenData.access_token;
+
+        // Use Perenual scientific name if available, otherwise fall back to search term / speciesName
+        const searchForOpb = perenualScientificName || speciesName;
+        const opbDetailRes = await fetch(
+          `https://open.plantbook.io/api/v1/plant/detail/${encodeURIComponent(searchForOpb.toLowerCase())}/`,
+          { headers: { Authorization: `Bearer ${opbToken}` } }
+        );
+
+        if (opbDetailRes.ok) {
+          openPlantbookData = await opbDetailRes.json();
+        }
+      }
+    } catch (err) {
+      console.error("OpenPlantbook error:", err);
+    }
+  }
+
+  if (openPlantbookData) {
+    const data = openPlantbookData as {
+      display_pid?: string;
+      alias?: string;
+      image_url?: string;
+      max_light_lux?: number;
+      min_light_lux?: number;
+      max_temp?: number;
+      min_temp?: number;
+      max_soil_moist?: number;
+      min_soil_moist?: number;
+      origin?: string;
+    };
+
+    if (data.display_pid) speciesName = cleanSpeciesName(data.display_pid);
+    if (data.alias && !commonName) commonName = data.alias;
+
+    // OpenPlantbook has real images - use them (overwrite even if Perenual gave a placeholder)
+    if (data.image_url && !isPlaceholderImage(data.image_url)) {
+      imageUrl = data.image_url;
+    }
+
+    // Light levels
+    const minLux = data.min_light_lux ?? 0;
+    const maxLux = data.max_light_lux ?? 0;
+    if (!light) {
+      if (maxLux < 5000) light = "Low light";
+      else if (maxLux < 15000) light = "Bright, indirect";
+      else light = "Bright, direct";
+    }
+
+    // Watering estimate
+    const minMoist = data.min_soil_moist ?? 0;
+    const maxMoist = data.max_soil_moist ?? 0;
+    const avgMoist = (minMoist + maxMoist) / 2;
+    if (!water) {
+      if (avgMoist < 20) water = "Every 14 days";
+      else if (avgMoist < 40) water = "Every 7–10 days";
+      else if (avgMoist < 60) water = "Every 5–7 days";
+      else water = "Every 3–5 days";
+    }
+
+    // Difficulty based on temp range
+    if (!difficulty) {
+      const tempRange = (data.max_temp ?? 30) - (data.min_temp ?? 10);
+      if (tempRange < 10) difficulty = "Easy";
+      else if (tempRange < 20) difficulty = "Moderate";
+      else difficulty = "Advanced";
+    }
+  }
+
+  // ========================================
+  // STEP 4b: Wikipedia image fallback (if OpenPlantbook had no image)
+  // ========================================
+  if (!imageUrl || isPlaceholderImage(imageUrl)) {
+    try {
+      const wikiImgRes = await fetch(
+        `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(speciesName)}&prop=pageimages&format=json&pithumbsize=500&origin=*`
+      );
+      if (wikiImgRes.ok) {
+        const wikiImgData = await wikiImgRes.json();
+        const pages = wikiImgData.query?.pages;
+        const firstPage = pages ? Object.values(pages)[0] as any : null;
+        if (firstPage?.thumbnail?.source) {
+          imageUrl = firstPage.thumbnail.source;
+        }
+      }
+    } catch (err) {
+      console.error("Wikipedia image error:", err);
+    }
+  }
+
+  // ========================================
+  // STEP 5: Wikipedia (using scientific name from Perenual)
   // ========================================
   try {
-    const encodedQuery = encodeURIComponent(searchQuery);
-    const perenualSearchUrl = `https://perenual.com/api/species-list?key=${perenualApiKey}&q=${encodedQuery}`;
-
-    const perenualResponse = await fetch(perenualSearchUrl);
-
-    if (!perenualResponse.ok) {
-      throw new Error(`Perenual API error: ${perenualResponse.status}`);
-    }
-
-    const perenualData = await perenualResponse.json();
-
-    if (!perenualData.data || perenualData.data.length === 0) {
-      return new Response(
-        JSON.stringify({ found: false, message: "No results found in Perenual" }),
-        {
-          status: 404,
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        }
-      );
-    }
-
-    // Get the first match's ID
-    const firstMatch = perenualData.data[0];
-    const perenualId = firstMatch.id;
-
-    // ========================================
-    // STEP 4: Get Perenual species details
-    // ========================================
-    const perenualDetailsUrl = `https://perenual.com/api/species/details/${perenualId}?key=${perenualApiKey}`;
-
-    const detailsResponse = await fetch(perenualDetailsUrl);
-
-    if (!detailsResponse.ok) {
-      throw new Error(`Perenual details API error: ${detailsResponse.status}`);
-    }
-
-    const detailsData = await detailsResponse.json();
-
-    // Extract Perenual data
-    const scientificName = searchQuery; // Use the name we searched with (could be from Plant.id)
-    const commonName =
-      detailsData.common_name ||
-      plantIdCommonNames?.[0] ||
-      null;
-    const description =
-      plantIdDescription ||
-      detailsData.description ||
-      null;
-    const imageUrl =
-      detailsData.default_image?.regular_url ||
-      detailsData.default_image?.original_url ||
-      detailsData.default_image?.medium_url ||
-      null;
-    const sunlight = detailsData.sunlight
-      ? Array.isArray(detailsData.sunlight)
-        ? detailsData.sunlight.join(", ")
-        : detailsData.sunlight
-      : null;
-    const watering = detailsData.watering || null;
-    const careLevel = detailsData.care_level || null;
-    const toxicity = detailsData.poisonous_to_pets || detailsData.poisonous_to_humans ? true : null;
-
-    // ========================================
-    // STEP 5: Insert into plant_library
-    // ========================================
-    const { data: inserted, error: insertError } = await supabaseAdmin
-      .from("plant_library")
-      .insert({
-        species_name: scientificName,
-        common_name: commonName,
-        description: description,
-        image_url: imageUrl,
-        light: sunlight,
-        water: watering,
-        difficulty: careLevel,
-        toxicity: toxicity,
-        source: "api_fallback",
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error("Insert error:", insertError);
-      // Still return the merged data even if insert fails
-      return new Response(
-        JSON.stringify({
-          found: true,
-          source: "api",
-          data: {
-            species_name: scientificName,
-            common_name: commonName,
-            description: description,
-            image_url: imageUrl,
-            light: sunlight,
-            water: watering,
-            difficulty: careLevel,
-            toxicity: toxicity,
-          },
-          perenual_id: perenualId,
-        }),
-        {
-          headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-        }
-      );
-    }
-
-    // ========================================
-    // STEP 6: Return the result
-    // ========================================
-    return new Response(
-      JSON.stringify({
-        found: true,
-        source: "api_fallback",
-        data: inserted,
-        perenual_id: perenualId,
-      }),
-      {
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      }
+    // Use Perenual scientific name if available, otherwise fall back to current speciesName
+    const wikiSearchTerm = perenualScientificName || speciesName;
+    const wikiSearchRes = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(wikiSearchTerm)}&format=json&origin=*`
     );
-  } catch (error) {
-    console.error("Perenual error:", error);
-    return new Response(
-      JSON.stringify({ found: false, message: "External API search failed" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    if (wikiSearchRes.ok) {
+      const wikiSearchData = await wikiSearchRes.json();
+      const wikiResults = wikiSearchData.query?.search || [];
+      if (wikiResults.length > 0) {
+        const wikiTitle = wikiResults[0].title;
+        const wikiPageRes = await fetch(
+          `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(wikiTitle)}&prop=pageimages|extracts&format=json&pithumbsize=500&exsentences=3&exintro=1&explaintext=1&origin=*`
+        );
+        if (wikiPageRes.ok) {
+          const wikiPageData = await wikiPageRes.json();
+          const pages = wikiPageData.query?.pages || {};
+          const page = Object.values(pages)[0] as {
+            thumbnail?: { source?: string };
+            extract?: string;
+          } | undefined;
+
+          if (page) {
+            // Wikipedia thumbnail as backup image (only if no image yet)
+            if (!imageUrl && page.thumbnail?.source) {
+              imageUrl = page.thumbnail.source;
+            }
+            // Wikipedia description as backup (only if no description yet)
+            if (!description && page.extract) {
+              description = page.extract;
+            }
+          }
+        }
       }
-    );
+    }
+  } catch (err) {
+    console.error("Wikipedia error:", err);
   }
+
+  // ========================================
+  // STEP 6: Fallbacks & toxicity check
+  // ========================================
+  if (!speciesName) {
+    return corsResponse(404, { found: false, message: "No search query available" });
+  }
+
+  if (!commonName && plantIdCommonNames && plantIdCommonNames.length > 0) {
+    commonName = plantIdCommonNames[0];
+  }
+  if (!description && plantIdDescription) {
+    description = plantIdDescription;
+  }
+
+  // Determine toxicity from map if still unknown
+  if (toxicityInfo === null) {
+    const keysToTry = [
+      speciesName.toLowerCase().replace(/\s*\(.*?\)\s*$/, "").trim(), // strip "(group)" etc
+      speciesName.toLowerCase(),
+      searchTerm?.toLowerCase(),
+      commonName?.toLowerCase(),
+    ];
+    for (const key of keysToTry) {
+      if (key && TOXICITY_MAP[key] !== undefined) {
+        toxicityInfo = TOXICITY_MAP[key];
+        break;
+      }
+    }
+    // Default to non-toxic if not found in map
+    if (toxicityInfo === null) {
+      toxicityInfo = { pets: "none", humans: false, symptoms: "Non-toxic; no symptoms expected", safe_placement: "Pet-safe and child-safe" };
+    }
+  }
+
+  // Apply defaults for empty/null fields before insert
+  if (!light) light = "Medium light";
+  if (!water) water = "Every 7 days";
+  if (!difficulty) difficulty = "Moderate";
+  if (!description) description = `${commonName || speciesName} is a popular houseplant.`;
+  if (!commonName) commonName = speciesName;
+
+  // ========================================
+  // STEP 6b: Unsplash fallback image (last resort)
+  // ========================================
+  if (!imageUrl) {
+    imageUrl = `https://source.unsplash.com/400x400/?${encodeURIComponent(speciesName)},plant`;
+  }
+
+  // ========================================
+  // STEP 7: Insert into plant_library
+  // ========================================
+  const { data: inserted, error: insertError } = await supabaseAdmin
+    .from("plant_library")
+    .insert({
+      species_name: speciesName,
+      common_name: commonName,
+      image_url: imageUrl,
+      light,
+      water,
+      difficulty,
+      description,
+      toxicity_to_pets: toxicityInfo.pets,
+      toxicity_to_humans: toxicityInfo.humans,
+      symptoms: toxicityInfo.symptoms,
+      safe_placement: toxicityInfo.safe_placement,
+      source: "api_fallback",
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error("Insert error:", insertError);
+    return corsResponse(200, {
+      found: true,
+      source: "api",
+      data: {
+        species_name: speciesName,
+        common_name: commonName,
+        image_url: imageUrl,
+        light,
+        water,
+        difficulty,
+        description,
+        toxicity_to_pets: toxicityInfo.pets,
+        toxicity_to_humans: toxicityInfo.humans,
+        symptoms: toxicityInfo.symptoms,
+        safe_placement: toxicityInfo.safe_placement,
+      },
+    });
+  }
+
+  return corsResponse(200, {
+    found: true,
+    source: "api_fallback",
+    data: inserted,
+  });
 });
