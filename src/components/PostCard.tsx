@@ -159,7 +159,7 @@ export default function PostCard({ post }: PostCardProps) {
       <PostLikersDialog postId={post.id} open={likersOpen} onOpenChange={setLikersOpen} />
 
       <Sheet open={commentsOpen} onOpenChange={setCommentsOpen}>
-        <SheetContent side="bottom" className="h-[80vh] flex flex-col p-0">
+        <SheetContent side="bottom" className="max-h-[80dvh] flex flex-col p-0">
           {/* Post Preview */}
           <div className="flex-shrink-0 p-3 border-b bg-muted/30">
             <div className="flex items-start gap-3">

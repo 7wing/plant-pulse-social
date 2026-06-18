@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  getTaskTypeIcon,
   formatDueDate,
   getTodayTasks,
   getUpcomingTasks,
@@ -57,33 +56,6 @@ const createTask = (overrides: Partial<CareTaskWithPlant> = {}): CareTaskWithPla
 };
 
 describe("careTasks utils", () => {
-  describe("getTaskTypeIcon", () => {
-    it("returns correct icon for water", () => {
-      expect(getTaskTypeIcon("water")).toBe("💧");
-    });
-
-    it("returns correct icon for fertilize", () => {
-      expect(getTaskTypeIcon("fertilize")).toBe("🧪");
-    });
-
-    it("returns correct icon for repot", () => {
-      expect(getTaskTypeIcon("repot")).toBe("🪴");
-    });
-
-    it("returns correct icon for prune", () => {
-      expect(getTaskTypeIcon("prune")).toBe("✂️");
-    });
-
-    it("returns default for unknown", () => {
-      expect(getTaskTypeIcon("unknown")).toBe("⭐");
-    });
-
-    it("handles case insensitivity", () => {
-      expect(getTaskTypeIcon("WATER")).toBe("💧");
-      expect(getTaskTypeIcon("Water")).toBe("💧");
-    });
-  });
-
   describe("formatDueDate", () => {
     it("returns 'No date' for null", () => {
       expect(formatDueDate(null)).toBe("No date");

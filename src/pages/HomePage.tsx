@@ -10,7 +10,7 @@ export default function HomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className={isMobile ? "" : "flex gap-6 p-6"}>
+    <div className={`pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto ${isMobile ? "" : "flex gap-6"}`}>
       {/* Main column - Care Tasks */}
       <div className={isMobile ? "" : "flex-1"}>
         {/* Mobile top bar — My Plants + Collection + Notification */}

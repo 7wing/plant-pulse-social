@@ -344,8 +344,8 @@ export default function AddPlantFlow({
           <div className="w-16 h-16 rounded-full bg-plant-lime/20 flex items-center justify-center">
             <ScanLine size={32} className="text-plant-lime" />
           </div>
-          <span className="font-bold text-lg">Scan to Identify</span>
-          <span className="text-xs text-muted-foreground">Use AI to identify your plant</span>
+          <span className="font-bold text-lg">Scan plant</span>
+          <span className="text-xs text-muted-foreground">Take a photo to scan your plant</span>
         </button>
 
         <button
@@ -368,7 +368,7 @@ export default function AddPlantFlow({
       {scanning ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
           <Loader2 size={40} className="animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Identifying plant...</p>
+          <p className="text-sm text-muted-foreground">Scanning plant...</p>
         </div>
       ) : scanError ? (
         <div className="space-y-4">
@@ -378,21 +378,21 @@ export default function AddPlantFlow({
             </div>
             <p className="text-sm text-destructive">{scanError}</p>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" onClick={() => setCurrentStep("method")}>
-              <ChevronLeft size={16} className="mr-1" /> Back
+          <div className="space-y-2">
+            <Button className="w-full" onClick={handleScan}>
+              <Camera size={16} className="mr-1" /> Try again
             </Button>
-            <Button className="flex-1" onClick={handleScan}>
-              <Camera size={16} className="mr-1" /> Try Again
+            <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
+              Cancel
             </Button>
           </div>
         </div>
       ) : scanResults && scanResults.length > 0 ? (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-lg">Identification Results</h3>
+            <h3 className="font-bold text-lg">Scan Results</h3>
             <span className="text-xs text-muted-foreground">
-              {(scanResults[0].score * 100).toFixed(1)}% confident
+              {(scanResults[0].score * 100).toFixed(1)}% match
             </span>
           </div>
 
@@ -426,12 +426,25 @@ export default function AddPlantFlow({
             <Button variant="outline" className="w-full" onClick={handleScan}>
               <Camera size={16} className="mr-1" /> Scan again
             </Button>
-            <Button variant="ghost" className="w-full" onClick={() => setCurrentStep("method")}>
+            <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12 gap-4 text-muted-foreground">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <Camera size={32} className="text-primary" />
+          </div>
+          <p className="text-sm">Take a photo to scan your plant</p>
+          <Button onClick={handleScan}>
+            <Camera size={16} className="mr-2" /> Take photo
+          </Button>
+          <Button variant="ghost" className="w-full" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+        </div>
+      )}
     </div>
   );
 
@@ -439,12 +452,21 @@ export default function AddPlantFlow({
   const renderConfirmStep = () => (
     <div className="space-y-5">
       <div className="flex items-center gap-2">
-        <button
-          onClick={() => setCurrentStep("method")}
-          className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
-        >
-          <ChevronLeft size={16} />
-        </button>
+        {scanResults && scanResults.length > 0 ? (
+          <button
+            onClick={() => setCurrentStep("scan")}
+            className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        ) : (
+          <button
+            onClick={() => onOpenChange(false)}
+            className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"
+          >
+            <ChevronLeft size={16} />
+          </button>
+        )}
         <h3 className="font-bold text-lg">Confirm Plant Details</h3>
       </div>
 
@@ -686,11 +708,11 @@ export default function AddPlantFlow({
 
       {isMobile ? (
         <Sheet open={open} onOpenChange={handleOpenChange}>
-          <SheetContent side="bottom" className="rounded-t-3xl max-h-[90vh] overflow-y-auto pb-8">
+          <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto pb-8">
             <SheetHeader className="mb-4">
               <SheetTitle>
                 {currentStep === "method" && "Add Plant"}
-                {currentStep === "scan" && "Plant Identification"}
+                {currentStep === "scan" && "Scan Plant"}
                 {currentStep === "confirm" && "Confirm Details"}
               </SheetTitle>
             </SheetHeader>
@@ -706,7 +728,7 @@ export default function AddPlantFlow({
             <DialogHeader className="mb-4">
               <DialogTitle>
                 {currentStep === "method" && "Add Plant"}
-                {currentStep === "scan" && "Plant Identification"}
+                {currentStep === "scan" && "Scan Plant"}
                 {currentStep === "confirm" && "Confirm Details"}
               </DialogTitle>
             </DialogHeader>

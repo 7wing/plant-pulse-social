@@ -11,7 +11,39 @@ import { supabase } from "@/lib/supabase";
 
 import liveProImg from "@/assets/live-propagation.jpg";
 
-const AVAILABLE_REACTIONS = ["❤️", "🌿", "🔥", "😍", "👏", "🌱"];
+const REACTIONS = [
+  { id: "heart", label: "Heart", svg: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+    </svg>
+  )},
+  { id: "leaf", label: "Leaf", svg: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <path d="M17,8C8,10,5.9,16.17,3.82,21.34L5.71,22l1-2.3A4.49,4.49,0,0,0,8,20C19,20,22,3,22,3,21,5,14,5.25,9,6.25S2,11.5,2,13.5a6.22,6.22,0,0,0,1.75,3.75C7,8,17,8,17,8Z"/>
+    </svg>
+  )},
+  { id: "fire", label: "Fire", svg: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67ZM11.71 19c-1.78 0-3.22-1.4-3.22-3.14 0-1.62 1.05-2.76 2.81-3.12 1.77-.36 3.6-1.21 4.62-2.58.39 1.29.59 2.65.59 4.04 0 2.65-2.15 4.8-4.8 4.8Z"/>
+    </svg>
+  )},
+  { id: "star", label: "Star", svg: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+    </svg>
+  )},
+  { id: "clap", label: "Clap", svg: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <path d="M23 5v14a2 2 0 01-2 2H3a2 2 0 01-2-2V5a2 2 0 012-2h18a2 2 0 012 2zm-2 0H3v14h18V5z"/>
+      <path d="M10 8h4v2h-4zm0 4h4v2h-4z"/>
+    </svg>
+  )},
+  { id: "sprout", label: "Sprout", svg: (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <path d="M2 22h20v-2H2v2zm2-4h16v-2H4v2zm4-4h8v-2H8v2zm-2-4h12V4H6v6z"/>
+    </svg>
+  )},
+];
 
 // Fallback avatar used when host has no avatar
 function HostAvatar({ src, alt }: { src: string | null | undefined; alt: string }) {
@@ -295,7 +327,7 @@ export default function LiveViewerPage() {
         <SideActionButton
           icon={<Heart size={20} className="text-primary-foreground" />}
           label="Like"
-          onClick={() => addReactionStatic("❤️")}
+          onClick={() => addReactionStatic("heart")}
         />
         <SideActionButton
           icon={<UserPlus size={20} className="text-primary-foreground" />}
@@ -319,7 +351,6 @@ export default function LiveViewerPage() {
       <ChatOverlay
         messages={chatMessages}
         onSendMessage={sendMessage}
-        availableReactions={AVAILABLE_REACTIONS}
       />
     </div>
   );
@@ -329,20 +360,20 @@ export default function LiveViewerPage() {
 
 // Module-level ref to avoid window pollution while still wiring
 // FloatingReactions and ChatOverlay together.
-let reactionRef: ((emoji: string) => void) | null = null;
+let reactionRef: ((reactionId: string) => void) | null = null;
 
-const addReactionStatic = (emoji: string) => {
-  reactionRef?.(emoji);
+const addReactionStatic = (reactionId: string) => {
+  reactionRef?.(reactionId);
 };
 
 function FloatingReactions() {
   const [floatingReactions, setFloatingReactions] = useState<
-    { id: number; emoji: string }[]
+    { id: number; reactionId: string }[]
   >([]);
 
-  const addReaction = (emoji: string) => {
+  const addReaction = (reactionId: string) => {
     const id = Date.now();
-    setFloatingReactions((prev) => [...prev, { id, emoji }]);
+    setFloatingReactions((prev) => [...prev, { id, reactionId }]);
     setTimeout(
       () => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)),
       2000
@@ -356,15 +387,18 @@ function FloatingReactions() {
 
   return (
     <div className="absolute right-4 bottom-40 flex flex-col items-center pointer-events-none z-10">
-      {floatingReactions.map((r) => (
-        <span
-          key={r.id}
-          className="text-2xl animate-float pointer-events-none"
-          style={{ animationDuration: "1.5s" }}
-        >
-          {r.emoji}
-        </span>
-      ))}
+      {floatingReactions.map((r) => {
+        const reaction = REACTIONS.find((rx) => rx.id === r.reactionId);
+        return reaction ? (
+          <span
+            key={r.id}
+            className="animate-float pointer-events-none text-plant-live"
+            style={{ animationDuration: "1.5s" }}
+          >
+            {reaction.svg}
+          </span>
+        ) : null;
+      })}
     </div>
   );
 }
@@ -392,11 +426,9 @@ function SideActionButton({
 function ChatOverlay({
   messages,
   onSendMessage,
-  availableReactions,
 }: {
   messages: StreamChatMessage[];
   onSendMessage: (text: string) => void;
-  availableReactions: string[];
 }) {
   const [chatMsg, setChatMsg] = useState("");
   const [showReactions, setShowReactions] = useState(false);
@@ -448,16 +480,16 @@ function ChatOverlay({
       {/* Reaction bar */}
       {showReactions && (
         <div className="flex gap-2 mb-2 animate-scale-in">
-          {availableReactions.map((emoji) => (
+          {REACTIONS.map((reaction) => (
             <button
-              key={emoji}
+              key={reaction.id}
               onClick={() => {
-                addReactionStatic(emoji);
+                addReactionStatic(reaction.id);
                 setShowReactions(false);
               }}
-              className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center text-lg hover:scale-110 transition-transform"
+              className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center text-plant-live hover:scale-110 transition-transform"
             >
-              {emoji}
+              {reaction.svg}
             </button>
           ))}
         </div>
@@ -467,9 +499,9 @@ function ChatOverlay({
       <div className="flex items-center gap-2">
         <button
           onClick={() => setShowReactions(!showReactions)}
-          className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center text-lg"
+          className="w-10 h-10 rounded-full bg-foreground/30 backdrop-blur-sm flex items-center justify-center text-plant-live"
         >
-          🌿
+          {REACTIONS.find((r) => r.id === "leaf")?.svg}
         </button>
         <div className="flex-1 relative">
           <input

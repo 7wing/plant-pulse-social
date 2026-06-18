@@ -8,14 +8,14 @@ export default function FAB() {
   const [open, setOpen] = useState(false);
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [addPlantOpen, setAddPlantOpen] = useState(false);
-  const [plantFlowMode, setPlantFlowMode] = useState<"method" | "scan">("method");
+  const [plantFlowMode, setPlantFlowMode] = useState<"method" | "scan" | "confirm">("method");
   const navigate = useNavigate();
 
   const actions = [
     { icon: Leaf, label: "Add care task", color: "bg-primary", action: () => { setOpen(false); setAddTaskOpen(true); } },
-    { icon: ScanLine, label: "Identify plant", color: "bg-plant-lime", action: () => { setOpen(false); setPlantFlowMode("scan"); setAddPlantOpen(true); } },
+    { icon: ScanLine, label: "Scan plant", color: "bg-plant-lime", action: () => { setOpen(false); setPlantFlowMode("scan"); setAddPlantOpen(true); } },
     { icon: PenSquare, label: "New post", color: "bg-plant-live", action: () => { setOpen(false); navigate("/community?newPost=1"); } },
-    { icon: Camera, label: "Add new plant", color: "bg-plant-warning", action: () => { setOpen(false); setPlantFlowMode("method"); setAddPlantOpen(true); } },
+    { icon: Camera, label: "Add new plant", color: "bg-plant-warning", action: () => { setOpen(false); setPlantFlowMode("confirm"); setAddPlantOpen(true); } },
   ];
 
   return (
@@ -50,6 +50,7 @@ export default function FAB() {
 
       {/* Add Plant Flow */}
       <AddPlantFlow
+        key={plantFlowMode}
         open={addPlantOpen}
         onOpenChange={setAddPlantOpen}
         initialStep={plantFlowMode}

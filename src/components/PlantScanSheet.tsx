@@ -40,7 +40,7 @@ export default function PlantScanSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Scan size={20} />
@@ -52,7 +52,7 @@ export default function PlantScanSheet({
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
               <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm">Identifying plant...</p>
+              <p className="text-sm">Scanning plant...</p>
             </div>
           ) : results && results.length > 0 ? (
             <div className="space-y-3">

@@ -147,7 +147,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="pb-20 md:pb-4 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
       <div className="px-4 pt-4 mb-4">
         <h1 className="text-lg font-bold">Settings</h1>
       </div>

@@ -66,15 +66,17 @@ export default function CollectionPreview() {
   }
 
   return (
-    <div className="w-80 bg-card rounded-2xl shadow-card p-4">
+    <div className="w-80 bg-card rounded-2xl shadow-card p-4 self-start">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base font-bold">My Plants</h3>
-        <button
-          onClick={() => navigate("/my-plants")}
-          className="text-sm text-primary hover:underline"
-        >
-          View all →
-        </button>
+        {plants.length > 6 && (
+          <button
+            onClick={() => navigate("/my-plants")}
+            className="text-sm text-primary hover:underline"
+          >
+            View all →
+          </button>
+        )}
       </div>
 
       {previewPlants.length === 0 ? (

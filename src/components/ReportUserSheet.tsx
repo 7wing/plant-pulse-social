@@ -57,7 +57,7 @@ export function ReportUserSheet({ userId, userName, open, onOpenChange }: Report
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="rounded-t-3xl">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto">
         <SheetHeader className="mb-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="text-destructive" size={20} />

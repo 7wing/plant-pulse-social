@@ -1,4 +1,4 @@
-import { ArrowLeft, Bell, Loader2 } from "lucide-react";
+import { ArrowLeft, Bell, Loader2, Sprout, Heart, MessageCircle, User, Trophy, XCircle, Award, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, type NotificationWithActor } from "@/queries/notifications";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,19 +16,20 @@ type NotificationMetadata = {
   event_title?: string;
 };
 
-function getNotificationIcon(type: string): string {
-  const iconMap: Record<string, string> = {
-    care_reminder: "🌱",
-    like: "❤️",
-    comment: "💬",
-    follow: "👤",
-    proposal_approved: "🏆",
-    proposal_rejected: "❌",
-    challenge_reminder: "📅",
-    event_reminder: "📅",
-    badge: "🏅",
-  };
-  return iconMap[type] || "🔔";
+const iconMap: Record<string, React.ReactNode> = {
+  care_reminder: <Sprout size={20} className="text-primary" />,
+  like: <Heart size={20} className="text-destructive" />,
+  comment: <MessageCircle size={20} className="text-primary" />,
+  follow: <User size={20} className="text-primary" />,
+  proposal_approved: <Trophy size={20} className="text-plant-warning" />,
+  proposal_rejected: <XCircle size={20} className="text-destructive" />,
+  challenge_reminder: <Calendar size={20} className="text-primary" />,
+  event_reminder: <Calendar size={20} className="text-primary" />,
+  badge: <Award size={20} className="text-primary" />,
+};
+
+function getNotificationIcon(type: string): React.ReactNode {
+  return iconMap[type?.toLowerCase()] || <Bell size={20} className="text-muted-foreground" />;
 }
 
 function getNotificationLink(
@@ -112,7 +113,7 @@ function NotificationItem({ notification, onTap, isLoading }: NotificationItemPr
       )}
     >
       {/* Icon */}
-      <span className="text-xl shrink-0 mt-0.5">
+      <span className="shrink-0 mt-0.5">
         {getNotificationIcon(notification.type)}
       </span>
 
@@ -205,7 +206,7 @@ export default function NotificationsPage() {
 
   if (isLoading) {
     return (
-      <div className="pb-4 min-h-screen">
+      <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
         <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg">
           <div className="flex items-center justify-between px-4 pt-4 pb-3">
             <Skeleton className="h-6 w-32" />
@@ -227,7 +228,7 @@ export default function NotificationsPage() {
   const hasNotifications = notifications.length > 0;
 
   return (
-    <div className="pb-4 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">
@@ -265,7 +266,7 @@ export default function NotificationsPage() {
       {/* Content */}
       {!hasNotifications ? (
         <div className="flex flex-col items-center justify-center py-16 px-4">
-          <span className="text-5xl" role="img" aria-hidden="true">🔔</span>
+          <Bell size={48} className="text-muted-foreground" />
           <p className="text-base font-semibold mt-4 text-center">
             Nothing here yet
           </p>

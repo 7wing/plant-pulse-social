@@ -5,10 +5,9 @@ import { useProfile } from "@/queries/profile";
 import { useCareTasks, useCompleteCareTask, getTodayTasks, getUpcomingTasks, getCompletedTasks, getOverdueTasks } from "@/queries/careTasks";
 import type { CareTaskWithPlant } from "@/queries/careTasks";
 import CareTaskList from "@/components/CareTaskList";
-import AddCareTaskSheet from "@/components/AddCareTaskSheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Leaf, Sprout, PartyPopper, Sparkles, Calendar, CheckCircle2 } from "lucide-react";
+
 
 export default function CareDashboard() {
   const { data: plants = [], isLoading: plantsLoading } = usePlants();
@@ -17,8 +16,8 @@ export default function CareDashboard() {
   const { data: profile } = useProfile(user?.id);
   const completeTask = useCompleteCareTask();
 
-  const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   // Greeting
   const hour = new Date().getHours();
@@ -39,8 +38,9 @@ export default function CareDashboard() {
   // Memoize derived task lists
   const todayTasks = useMemo(() => getTodayTasks(allTasks), [allTasks]);
   const upcomingTasks = useMemo(() => getUpcomingTasks(allTasks), [allTasks]);
-  const completedTasks = useMemo(() => getCompletedTasks(allTasks).slice(0, 5), [allTasks]);
   const overdueTasks = useMemo(() => getOverdueTasks(allTasks), [allTasks]);
+  const totalCompleted = useMemo(() => getCompletedTasks(allTasks).length, [allTasks]);
+  const allCompletedTasks = useMemo(() => getCompletedTasks(allTasks), [allTasks]);
 
   // Memoize stats using the pre-built map
   const todayStart = useMemo(() => {
@@ -108,13 +108,13 @@ export default function CareDashboard() {
     );
   }
 
-  const hasAnyTasks = todayTasks.length > 0 || upcomingTasks.length > 0 || completedTasks.length > 0 || overdueTasks.length > 0;
+  const hasAnyTasks = todayTasks.length > 0 || upcomingTasks.length > 0 || totalCompleted > 0 || overdueTasks.length > 0;
 
   return (
     <div className="pb-4">
       {/* Greeting + stats */}
       <div className="px-4 pt-2 pb-3">
-        <p className="text-xs text-muted-foreground">{greeting} 🌿</p>
+        <p className="text-xs text-muted-foreground">{greeting} <Leaf size={14} className="inline text-plant-live" /></p>
         <p className="text-sm font-bold">{displayName}</p>
         <p className="text-xs text-muted-foreground mt-1">
           {totalPlants} plants · {healthyPlants} healthy · {needCarePlants} need care
@@ -128,16 +128,10 @@ export default function CareDashboard() {
       <div className="px-4 space-y-6">
         {!hasAnyTasks ? (
           <div className="text-center py-12">
-            <span className="text-4xl" role="img" aria-hidden="true">🌱</span>
-            <p className="text-base font-semibold mt-4">All caught up! 🌿</p>
+            <Sprout size={48} className="text-muted-foreground mx-auto" />
+            <p className="text-base font-semibold mt-4">All caught up!</p>
             <p className="text-sm text-muted-foreground mt-1">No care tasks right now.</p>
-            <Button
-              onClick={() => setAddTaskOpen(true)}
-              className="mt-4 gradient-leaf text-primary-foreground"
-            >
-              <Plus size={16} className="mr-2" />
-              Add care task
-            </Button>
+
           </div>
         ) : (
           <>
@@ -152,7 +146,7 @@ export default function CareDashboard() {
                   onComplete={handleCompleteTask}
                   completingTaskId={completingTaskId}
                   emptyMessage="No overdue tasks"
-                  emptyIcon="🎉"
+                  emptyIcon={<PartyPopper size={24} className="text-muted-foreground" />}
                 />
               </div>
             )}
@@ -166,7 +160,7 @@ export default function CareDashboard() {
                   onComplete={handleCompleteTask}
                   completingTaskId={completingTaskId}
                   emptyMessage="No tasks due today"
-                  emptyIcon="✨"
+                  emptyIcon={<Sparkles size={24} className="text-muted-foreground" />}
                 />
               </div>
             )}
@@ -180,42 +174,48 @@ export default function CareDashboard() {
                   onComplete={handleCompleteTask}
                   completingTaskId={completingTaskId}
                   emptyMessage="No upcoming tasks"
-                  emptyIcon="📅"
+                  emptyIcon={<Calendar size={24} className="text-muted-foreground" />}
                 />
               </div>
             )}
 
             {/* Completed tasks */}
-            {completedTasks.length > 0 && (
+            {totalCompleted > 0 && (
               <div>
-                <CareTaskList
-                  title="Completed"
-                  tasks={completedTasks}
-                  onComplete={handleCompleteTask}
-                  completingTaskId={completingTaskId}
-                  emptyMessage="No completed tasks"
-                  emptyIcon="✅"
-                />
+                {showCompleted ? (
+                  <CareTaskList
+                    title="Completed"
+                    tasks={allCompletedTasks}
+                    onComplete={handleCompleteTask}
+                    completingTaskId={completingTaskId}
+                    emptyMessage="No completed tasks"
+                    emptyIcon={<CheckCircle2 size={24} className="text-muted-foreground" />}
+                  />
+                ) : (
+                  <CareTaskList
+                    title="Completed"
+                    tasks={allCompletedTasks.slice(0, 2)}
+                    onComplete={handleCompleteTask}
+                    completingTaskId={completingTaskId}
+                    emptyMessage="No completed tasks"
+                    emptyIcon={<CheckCircle2 size={24} className="text-muted-foreground" />}
+                  />
+                )}
+                <button
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="text-xs text-primary font-medium hover:underline mt-2 px-1"
+                >
+                  {showCompleted ? "Hide completed" : `Show all ${totalCompleted} completed`}
+                </button>
               </div>
             )}
 
-            {/* Add button */}
-            <div className="flex justify-center pt-2">
-              <Button
-                onClick={() => setAddTaskOpen(true)}
-                variant="outline"
-                className="gap-2"
-              >
-                <Plus size={16} />
-                Add care task
-              </Button>
-            </div>
+
           </>
         )}
       </div>
 
-      {/* Add Care Task Sheet — only mount when open */}
-      {addTaskOpen && <AddCareTaskSheet open={addTaskOpen} onOpenChange={setAddTaskOpen} />}
+
     </div>
   );
 }

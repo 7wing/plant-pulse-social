@@ -1,17 +1,23 @@
 import { useNavigate } from "react-router-dom";
+import { AlertTriangle, Shield } from "lucide-react";
 import type { PlantLibraryEntry } from "@/queries/plantLibrary";
 
 interface PlantLibraryCardProps {
   entry: PlantLibraryEntry;
+  onClick?: () => void;
 }
 
 const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=400&fit=crop";
 
-export default function PlantLibraryCard({ entry }: PlantLibraryCardProps) {
+export default function PlantLibraryCard({ entry, onClick }: PlantLibraryCardProps) {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate(`/care-guide/${entry.id}`);
+    if (onClick) {
+      onClick();
+    } else {
+      navigate(`/care-guide/${entry.id}`);
+    }
   };
 
   return (
@@ -41,6 +47,34 @@ export default function PlantLibraryCard({ entry }: PlantLibraryCardProps) {
           <p className="text-xs text-muted-foreground mt-1 capitalize">
             {entry.difficulty}
           </p>
+        )}
+        {entry.toxicity_to_pets && (
+          <div
+            className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${
+              entry.toxicity_to_pets === "high"
+                ? "bg-red-100 text-red-700"
+                : entry.toxicity_to_pets === "moderate"
+                ? "bg-orange-100 text-orange-700"
+                : entry.toxicity_to_pets === "low"
+                ? "bg-yellow-100 text-yellow-700"
+                : "bg-green-100 text-green-700"
+            }`}
+          >
+            {entry.toxicity_to_pets === "high" ? (
+              <AlertTriangle className="w-3 h-3" />
+            ) : entry.toxicity_to_pets === "none" ? (
+              <Shield className="w-3 h-3" />
+            ) : (
+              <AlertTriangle className="w-3 h-3" />
+            )}
+            {entry.toxicity_to_pets === "high"
+              ? "High"
+              : entry.toxicity_to_pets === "moderate"
+              ? "Moderate"
+              : entry.toxicity_to_pets === "low"
+              ? "Low"
+              : "Safe"}
+          </div>
         )}
       </div>
     </div>

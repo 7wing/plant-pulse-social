@@ -1,4 +1,4 @@
-import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Users, Play, Moon, Sun as SunIcon, Monitor, Loader2, LogOut, MoreHorizontal, ImagePlus } from "lucide-react";
+import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Users, Play, Moon, Sun as SunIcon, Monitor, Loader2, LogOut, MoreHorizontal, ImagePlus, Eye, EyeOff, Mail, Lock, Sprout, Trophy, Gem, Hand } from "lucide-react";
 import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useTheme } from "@/hooks/useTheme";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useProfile, useUpdateProfile } from "@/queries/profile";
 import { useFeedPosts, useSavedPosts, useLikedPosts } from "@/queries/posts";
 import { useFollow, useUnfollow, useIsFollowing, useFollowerCount, useFollowingCount } from "@/queries/follows";
@@ -26,6 +27,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   Popover,
   PopoverContent,
@@ -52,6 +60,18 @@ const editSchema = z.object({
   location: z.string().max(50).optional(),
   hide_location: z.boolean().optional(),
   interests: z.array(z.string()).max(5).optional(),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  current_password: z.string().optional().or(z.literal("")),
+  new_password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
+  confirm_password: z.string().optional().or(z.literal("")),
+}).refine((data) => {
+  if (data.new_password && data.new_password !== data.confirm_password) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Passwords do not match",
+  path: ["confirm_password"],
 });
 
 type EditForm = z.infer<typeof editSchema>;
@@ -67,13 +87,16 @@ export default function ProfilePage() {
   const isOwnProfile = !id;
 
   const [activeTab, setActiveTab] = useState("posts");
-  const [savedSubTab, setSavedSubTab] = useState<"posts" | "guides">("posts");
+  const [savedSubTab, setSavedSubTab] = useState<"posts" | "plants" | "guides">("posts");
   const { theme, setTheme } = useTheme();
   const [showSettings, setShowSettings] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [followersListOpen, setFollowersListOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const isMobile = useIsMobile();
 
   const { data: profile, isLoading: profileLoading } = useProfile(id);
   const updateProfile = useUpdateProfile();
@@ -110,12 +133,17 @@ export default function ProfilePage() {
       location: profile?.location || "",
       hide_location: false,
       interests: profileInterests,
+      email: currentUser?.email || "",
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
     },
   });
 
   const watchedInterests = watch("interests") || [];
 
   const onEditSubmit = async (data: EditForm) => {
+    // Update profile fields
     await updateProfile.mutateAsync({
       display_name: data.display_name,
       username: data.username,
@@ -126,6 +154,27 @@ export default function ProfilePage() {
         hide_location: data.hide_location || false,
       },
     });
+
+    // Update email if changed
+    if (data.email && data.email !== currentUser?.email) {
+      const { error: emailError } = await supabase.auth.updateUser({ email: data.email });
+      if (emailError) {
+        toast.error(emailError.message || "Failed to update email");
+        return;
+      }
+      toast.success("Email updated. Please check your inbox to confirm the new email.");
+    }
+
+    // Update password if provided
+    if (data.new_password && data.current_password) {
+      const { error: passwordError } = await supabase.auth.updateUser({ password: data.new_password });
+      if (passwordError) {
+        toast.error(passwordError.message || "Failed to update password");
+        return;
+      }
+      toast.success("Password updated successfully");
+    }
+
     setEditOpen(false);
   };
 
@@ -178,8 +227,229 @@ export default function ProfilePage() {
   // Collection tab for other profiles
   const { data: profilePlants = [], isLoading: plantsLoading } = useProfilePlants(profile?.id);
 
+  const editFormContent = (
+    <form onSubmit={handleSubmit(onEditSubmit)} className="space-y-4 py-4">
+      {/* Avatar upload */}
+      <div className="space-y-2">
+        <Label>Avatar</Label>
+        <div className="flex items-center gap-3">
+          <img
+            src={profile?.avatar_url || AVATAR}
+            alt="Avatar preview"
+            className="w-16 h-16 rounded-full object-cover ring-2 ring-primary/30"
+          />
+          <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 cursor-pointer transition-colors text-sm font-medium">
+            <ImagePlus size={16} />
+            Upload Photo
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={uploading}
+            />
+          </label>
+          {uploading && <Loader2 size={16} className="animate-spin text-muted-foreground" />}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="display_name">Display Name</Label>
+        <Input id="display_name" {...register("display_name")} placeholder="Your display name" />
+        {errors.display_name && (
+          <p className="text-xs text-destructive">{errors.display_name.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="username">Username</Label>
+        <Input
+          id="username"
+          {...register("username")}
+          placeholder="your_username"
+        />
+        {errors.username && (
+          <p className="text-xs text-destructive">{errors.username.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="bio">Bio</Label>
+        <Textarea
+          id="bio"
+          {...register("bio")}
+          placeholder="Tell us about your plant journey..."
+          rows={3}
+        />
+        {errors.bio && <p className="text-xs text-destructive">{errors.bio.message}</p>}
+      </div>
+
+      {/* Email */}
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <div className="relative">
+          <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input id="email" {...register("email")} placeholder="your@email.com" className="pl-9" />
+        </div>
+        {errors.email && (
+          <p className="text-xs text-destructive">{errors.email.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="location">Location</Label>
+        <div className="relative">
+          <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input id="location" {...register("location")} placeholder="City, Country" className="pl-9" />
+        </div>
+        {errors.location && <p className="text-xs text-destructive">{errors.location.message}</p>}
+      </div>
+
+      {/* Hide location checkbox */}
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="hide_location"
+          {...register("hide_location")}
+          className="rounded border-input w-4 h-4"
+        />
+        <Label htmlFor="hide_location" className="text-sm font-normal cursor-pointer">
+          Hide location on profile
+        </Label>
+      </div>
+
+      {/* Interests pill selector */}
+      <div className="space-y-2">
+        <Label>Interests <span className="text-muted-foreground">(max 5)</span></Label>
+        <Controller
+          name="interests"
+          control={control}
+          render={({ field }) => (
+            <div className="flex flex-wrap gap-2">
+              {INTEREST_OPTIONS.map((interest) => {
+                const selected = field.value?.includes(interest) ?? false;
+                const disabled = !selected && (field.value?.length ?? 0) >= 5;
+                return (
+                  <button
+                    key={interest}
+                    type="button"
+                    onClick={() => {
+                      if (selected) {
+                        field.onChange(field.value.filter((i) => i !== interest));
+                      } else if ((field.value?.length ?? 0) < 5) {
+                        field.onChange([...(field.value || []), interest]);
+                      }
+                    }}
+                    disabled={disabled && !selected}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      selected
+                        ? "gradient-leaf text-primary-foreground"
+                        : disabled
+                        ? "bg-muted text-muted-foreground/50 cursor-not-allowed"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {interest}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        />
+      </div>
+
+      {/* Password change section */}
+      <div className="space-y-3 pt-2 border-t border-border">
+        <p className="text-sm font-semibold flex items-center gap-2">
+          <Lock size={16} />
+          Change Password
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Leave blank to keep your current password.
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="current_password">Current Password</Label>
+          <div className="relative">
+            <Input
+              id="current_password"
+              type={showCurrentPassword ? "text" : "password"}
+              {...register("current_password")}
+              placeholder="Current password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrentPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="new_password">New Password</Label>
+          <div className="relative">
+            <Input
+              id="new_password"
+              type={showNewPassword ? "text" : "password"}
+              {...register("new_password")}
+              placeholder="New password (min 6 characters)"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            >
+              {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {errors.new_password && (
+            <p className="text-xs text-destructive">{errors.new_password.message}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirm_password">Confirm New Password</Label>
+          <Input
+            id="confirm_password"
+            type="password"
+            {...register("confirm_password")}
+            placeholder="Confirm new password"
+          />
+          {errors.confirm_password && (
+            <p className="text-xs text-destructive">{errors.confirm_password.message}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setEditOpen(false)}
+          disabled={isSubmitting || updateProfile.isPending}
+          className="flex-1"
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          className="gradient-leaf text-primary-foreground hover:opacity-90 flex-1"
+          disabled={isSubmitting || updateProfile.isPending}
+        >
+          {updateProfile.isPending ? (
+            <>
+              <Loader2 size={14} className="animate-spin mr-1" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+
   return (
-    <div className="pb-20 md:pb-4 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
       {/* Followers List Modal */}
       <FollowersList
         userId={profile?.id || ""}
@@ -196,7 +466,7 @@ export default function ProfilePage() {
       />
 
       {/* Header */}
-      <div className="relative gradient-hero">
+      <div className="relative">
         <div className="flex items-center justify-between px-4 pt-4">
           <h1 className="text-lg font-bold">Profile</h1>
           <div className="flex gap-2">
@@ -327,8 +597,8 @@ export default function ProfilePage() {
                 </p>
               )}
               {profileInterests.length > 0 && (
-                <p className="text-xs text-center md:text-left mt-1 text-muted-foreground">
-                  🌱 {profileInterests.join(", ")}
+                <p className="text-xs text-center md:text-left mt-1 text-muted-foreground flex items-center gap-1">
+                  <Sprout size={14} className="inline text-primary" /> {profileInterests.join(", ")}
                 </p>
               )}
 
@@ -417,12 +687,12 @@ export default function ProfilePage() {
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-hide">
           {[
-            { name: "Master Propagator", emoji: "🌱" },
-            { name: "Plant Parent 100", emoji: "🏆" },
-            { name: "Rare Collector", emoji: "💎" },
+            { name: "Master Propagator", icon: Sprout },
+            { name: "Plant Parent 100", icon: Trophy },
+            { name: "Rare Collector", icon: Gem },
           ].map((b) => (
             <div key={b.name} className="flex items-center gap-1.5 bg-card rounded-full px-3 py-1.5 shadow-card min-w-fit border border-border">
-              <span className="text-sm">{b.emoji}</span>
+              <b.icon size={16} className="text-primary" />
               <span className="text-xs font-medium whitespace-nowrap">{b.name}</span>
             </div>
           ))}
@@ -544,11 +814,12 @@ export default function ProfilePage() {
           <div className="flex gap-2 overflow-x-auto scrollbar-hide">
             {[
               { id: "posts", label: "Posts" },
+              { id: "plants", label: "Plants" },
               { id: "guides", label: "Care Guides" },
             ].map(({ id, label }) => (
               <button
                 key={id}
-                onClick={() => setSavedSubTab(id as "posts" | "guides")}
+                onClick={() => setSavedSubTab(id as "posts" | "plants" | "guides")}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                   savedSubTab === id
                     ? "bg-primary text-primary-foreground"
@@ -590,6 +861,58 @@ export default function ProfilePage() {
             </div>
           )}
 
+          {savedSubTab === "plants" && (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {guidesLoading ? (
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-card rounded-2xl overflow-hidden animate-pulse">
+                    <div className="aspect-square bg-muted" />
+                    <div className="p-2.5 space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))
+              ) : savedGuides.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
+                  No saved plants yet.
+                </div>
+              ) : (
+                savedGuides.map((guide) => (
+                  <div
+                    key={guide.id}
+                    className="bg-card rounded-2xl shadow-card overflow-hidden cursor-pointer hover:shadow-elevated transition-all hover:scale-[1.02]"
+                    onClick={() => guide.plant_library && navigate(`/care-guide/${guide.plant_library.id}`)}
+                  >
+                    <div className="relative aspect-square">
+                      {guide.plant_library?.image_url ? (
+                        <img
+                          src={guide.plant_library.image_url}
+                          alt={guide.plant_library.common_name || guide.plant_library.species_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <Leaf size={24} className="text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2.5">
+                      <p className="text-sm font-bold truncate">
+                        {guide.plant_library?.common_name || guide.plant_library?.species_name || "Unknown Plant"}
+                      </p>
+                      {guide.plant_library?.species_name && guide.plant_library?.common_name && (
+                        <p className="text-xs text-muted-foreground truncate italic">
+                          {guide.plant_library.species_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
           {savedSubTab === "guides" && (
             <div className="space-y-2">
               {guidesLoading ? (
@@ -611,7 +934,7 @@ export default function ProfilePage() {
                   <div
                     key={guide.id}
                     className="bg-card rounded-xl p-3 flex gap-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                    onClick={() => guide.plant_library && navigate(`/plant/${guide.plant_library.id}`)}
+                    onClick={() => guide.plant_library && navigate(`/care-guide/${guide.plant_library.id}`)}
                   >
                     <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 bg-muted flex items-center justify-center">
                       {guide.plant_library?.image_url ? (
@@ -696,13 +1019,13 @@ export default function ProfilePage() {
         <div className="px-4">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {[
-              { name: "Master Propagator", emoji: "🌱", desc: "Share 50+ propagation posts" },
-              { name: "Plant Parent 100", emoji: "🏆", desc: "Reach 100 followers" },
-              { name: "Rare Collector", emoji: "💎", desc: "Add 10 rare plants" },
-              { name: "Helpful Hand", emoji: "🤝", desc: "Help 25 other plant parents" },
+              { name: "Master Propagator", icon: Sprout, desc: "Share 50+ propagation posts" },
+              { name: "Plant Parent 100", icon: Trophy, desc: "Reach 100 followers" },
+              { name: "Rare Collector", icon: Gem, desc: "Add 10 rare plants" },
+              { name: "Helpful Hand", icon: Hand, desc: "Help 25 other plant parents" },
             ].map((badge) => (
               <div key={badge.name} className="bg-card rounded-xl p-4 flex flex-col items-center text-center gap-2 shadow-card border border-border">
-                <span className="text-3xl">{badge.emoji}</span>
+                <badge.icon size={32} className="text-primary" />
                 <p className="text-sm font-semibold">{badge.name}</p>
                 <p className="text-xs text-muted-foreground">{badge.desc}</p>
               </div>
@@ -711,157 +1034,32 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Edit Profile Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
-              Update your profile information. Click save when you&apos;re done.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit(onEditSubmit)} className="space-y-4 py-4">
-            {/* Avatar upload */}
-            <div className="space-y-2">
-              <Label>Avatar</Label>
-              <div className="flex items-center gap-3">
-                <img
-                  src={profile?.avatar_url || AVATAR}
-                  alt="Avatar preview"
-                  className="w-16 h-16 rounded-full object-cover ring-2 ring-primary/30"
-                />
-                <label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 cursor-pointer transition-colors text-sm font-medium">
-                  <ImagePlus size={16} />
-                  Upload Photo
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                    disabled={uploading}
-                  />
-                </label>
-                {uploading && <Loader2 size={16} className="animate-spin text-muted-foreground" />}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="display_name">Display Name</Label>
-              <Input id="display_name" {...register("display_name")} placeholder="Your display name" />
-              {errors.display_name && (
-                <p className="text-xs text-destructive">{errors.display_name.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                {...register("username")}
-                placeholder="your_username"
-              />
-              {errors.username && (
-                <p className="text-xs text-destructive">{errors.username.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                {...register("bio")}
-                placeholder="Tell us about your plant journey..."
-                rows={3}
-              />
-              {errors.bio && <p className="text-xs text-destructive">{errors.bio.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input id="location" {...register("location")} placeholder="City, Country" />
-              {errors.location && <p className="text-xs text-destructive">{errors.location.message}</p>}
-            </div>
-
-            {/* Hide location checkbox */}
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="hide_location"
-                {...register("hide_location")}
-                className="rounded border-input w-4 h-4"
-              />
-              <Label htmlFor="hide_location" className="text-sm font-normal cursor-pointer">
-                Hide location on profile
-              </Label>
-            </div>
-
-            {/* Interests pill selector */}
-            <div className="space-y-2">
-              <Label>Interests <span className="text-muted-foreground">(max 5)</span></Label>
-              <Controller
-                name="interests"
-                control={control}
-                render={({ field }) => (
-                  <div className="flex flex-wrap gap-2">
-                    {INTEREST_OPTIONS.map((interest) => {
-                      const selected = field.value?.includes(interest) ?? false;
-                      const disabled = !selected && (field.value?.length ?? 0) >= 5;
-                      return (
-                        <button
-                          key={interest}
-                          type="button"
-                          onClick={() => {
-                            if (selected) {
-                              field.onChange(field.value.filter((i) => i !== interest));
-                            } else if ((field.value?.length ?? 0) < 5) {
-                              field.onChange([...(field.value || []), interest]);
-                            }
-                          }}
-                          disabled={disabled && !selected}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                            selected
-                              ? "gradient-leaf text-primary-foreground"
-                              : disabled
-                              ? "bg-muted text-muted-foreground/50 cursor-not-allowed"
-                              : "bg-muted text-muted-foreground hover:bg-muted/80"
-                          }`}
-                        >
-                          {interest}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditOpen(false)}
-                disabled={isSubmitting || updateProfile.isPending}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                className="gradient-leaf text-primary-foreground hover:opacity-90"
-                disabled={isSubmitting || updateProfile.isPending}
-              >
-                {updateProfile.isPending ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin mr-1" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Profile Dialog / Sheet */}
+      {isMobile ? (
+        <Sheet open={editOpen} onOpenChange={setEditOpen}>
+          <SheetContent side="bottom" className="rounded-t-3xl max-h-[90dvh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Edit Profile</SheetTitle>
+              <SheetDescription>
+                Update your profile information. Click save when you&apos;re done.
+              </SheetDescription>
+            </SheetHeader>
+            {editFormContent}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Profile</DialogTitle>
+              <DialogDescription>
+                Update your profile information. Click save when you&apos;re done.
+              </DialogDescription>
+            </DialogHeader>
+            {editFormContent}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

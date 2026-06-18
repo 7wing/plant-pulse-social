@@ -64,10 +64,10 @@ export default function ChallengeEventDetailSheet({ challengeId, open, onOpenCha
       {/* Header */}
       <SheetHeader className="p-4 border-b">
         <div className="flex items-center gap-3">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
             isEvent ? "bg-primary/10" : "bg-plant-warning/10"
           }`}>
-            {isEvent ? "📅" : "🏆"}
+            {isEvent ? <Calendar size={24} className="text-primary" /> : <Trophy size={24} className="text-plant-warning" />}
           </div>
           <div className="flex-1">
             <SheetTitle className="text-lg">{challenge?.title}</SheetTitle>
@@ -153,7 +153,7 @@ export default function ChallengeEventDetailSheet({ challengeId, open, onOpenCha
     <>
       {isMobile ? (
         <Sheet open={open} onOpenChange={onOpenChange}>
-          <SheetContent side="bottom" className="h-[85vh] p-0 rounded-t-3xl">
+          <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto p-0 rounded-t-3xl">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -172,10 +172,10 @@ export default function ChallengeEventDetailSheet({ challengeId, open, onOpenCha
           <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
             <DialogHeader className="p-4 border-b">
               <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                   isEvent ? "bg-primary/10" : "bg-plant-warning/10"
                 }`}>
-                  {isEvent ? "📅" : "🏆"}
+                  {isEvent ? <Calendar size={24} className="text-primary" /> : <Trophy size={24} className="text-plant-warning" />}
                 </div>
                 <div className="flex-1">
                   <DialogTitle className="text-lg">{challenge?.title}</DialogTitle>

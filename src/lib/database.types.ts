@@ -607,9 +607,12 @@ export type Database = {
           id: string
           image_url: string | null
           light: string | null
+          safe_placement: string | null
           source: string | null
           species_name: string | null
-          toxicity: string | null
+          symptoms: string | null
+          toxicity_to_humans: boolean | null
+          toxicity_to_pets: string | null
           water: string | null
         }
         Insert: {
@@ -620,9 +623,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           light?: string | null
+          safe_placement?: string | null
           source?: string | null
           species_name?: string | null
-          toxicity?: string | null
+          symptoms?: string | null
+          toxicity_to_humans?: boolean | null
+          toxicity_to_pets?: string | null
           water?: string | null
         }
         Update: {
@@ -633,9 +639,12 @@ export type Database = {
           id?: string
           image_url?: string | null
           light?: string | null
+          safe_placement?: string | null
           source?: string | null
           species_name?: string | null
-          toxicity?: string | null
+          symptoms?: string | null
+          toxicity_to_humans?: boolean | null
+          toxicity_to_pets?: string | null
           water?: string | null
         }
         Relationships: []

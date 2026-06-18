@@ -19,7 +19,7 @@ test.describe('Navigation', () => {
   test('FAB has correct actions', async ({ page }) => {
     await page.click('[data-testid="fab"]');
     await expect(page.locator('text=Add care task')).toBeVisible();
-    await expect(page.locator('text=Identify plant')).toBeVisible();
+    await expect(page.locator('text=Scan plant')).toBeVisible();
     await expect(page.locator('text=Add new plant')).toBeVisible();
     await expect(page.locator('text=New post')).toBeVisible();
   });

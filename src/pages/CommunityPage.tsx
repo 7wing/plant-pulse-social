@@ -179,7 +179,7 @@ export default function CommunityPage() {
   }, [fetchNextPage, hasNextPage]);
 
   return (
-    <div className="pb-20 md:pb-4 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-2">
         <h1 className="text-xl font-bold mb-3">Community</h1>
@@ -227,7 +227,7 @@ export default function CommunityPage() {
       </div>
 
       {/* Main Content - Two columns on desktop */}
-      <div className="px-4 md:flex md:gap-6 md:max-w-6xl md:mx-auto">
+      <div className="px-4 md:flex md:gap-6">
         {/* Left Column - Feed */}
         <div className="flex-1">
           {/* User Search Results */}
@@ -296,6 +296,35 @@ export default function CommunityPage() {
           {/* Feed (Posts tab or no search) */}
           {(!searchQuery.trim() || searchTab === "posts") && (
             <>
+              {/* Mobile: This week challenges */}
+              <div className="md:hidden py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-semibold">This week</h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setProposeOpen(true)}
+                    className="text-xs h-7"
+                  >
+                    <Plus size={14} className="mr-1" />
+                    Propose
+                  </Button>
+                </div>
+                {challenges && challenges.length > 0 ? (
+                  <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+                    {challenges.map((challenge) => (
+                      <ChallengeEventCard
+                        key={challenge.id}
+                        challenge={challenge}
+                        onClick={() => handleChallengeClick(challenge.id)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground px-1">No active challenges or events</p>
+                )}
+              </div>
+
               {/* Posts Feed */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
                 {isLoading ? (
@@ -396,35 +425,6 @@ export default function CommunityPage() {
         </div>
       </div>
 
-      {/* Mobile: Challenges strip above feed */}
-      <div className="md:hidden px-4 py-3">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold">This week</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setProposeOpen(true)}
-            className="text-xs h-7"
-          >
-            <Plus size={14} className="mr-1" />
-            Propose
-          </Button>
-        </div>
-        {challenges && challenges.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-            {challenges.map((challenge) => (
-              <ChallengeEventCard
-                key={challenge.id}
-                challenge={challenge}
-                onClick={() => handleChallengeClick(challenge.id)}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-
-
       {/* Challenge Event Detail Sheet */}
       <ChallengeEventDetailSheet
         challengeId={selectedChallengeId}
@@ -441,7 +441,7 @@ export default function CommunityPage() {
       {/* New Post Sheet */}
       {isMobile ? (
         <Sheet open={newPostOpen} onOpenChange={setNewPostOpen}>
-          <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
+          <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto">
             <SheetHeader>
               <SheetTitle>New Post</SheetTitle>
             </SheetHeader>
@@ -553,7 +553,7 @@ export default function CommunityPage() {
         </Sheet>
       ) : (
         <Dialog open={newPostOpen} onOpenChange={setNewPostOpen}>
-          <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[500px] max-h-[85dvh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>New Post</DialogTitle>
             </DialogHeader>

@@ -75,7 +75,7 @@ export default function PlantNotesSheet({ open, onOpenChange, plantId, onSuccess
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="rounded-t-3xl">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto">
         <SheetHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

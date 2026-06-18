@@ -9,7 +9,7 @@ This document compiles everything designed so far, plus best-case designs for th
 **Mobile**
 - Top bar: `My Plants` (title) — `[Collection icon]` — `[Notification icon]`
 - Bottom nav: `Home | Explore | Community | Profile`
-- Global FAB (`+`): expands to `Add care task / Identify plant / Add new plant / New post`
+- Global FAB (`+`): expands to `Add care task / Scan plant / Add new plant / New post`
 
 **Desktop**
 - Floating top nav: `Home | Explore | Community ......... Notification | Profile`
@@ -87,7 +87,7 @@ Welcome back, William
 
                                     [ + Add ▾ ]
                                       Add care task
-                                      Identify plant
+                                      Scan plant
                                       New post
                                       Add new plant
 
@@ -132,9 +132,9 @@ Notes & photos
 ```
 "Care score" = % based on on-time completion of recurring care tasks. History stored indefinitely; only last 30 days shown inline.
 
-### 4.4 Add Plant / Identify Plant
+### 4.4 Scan Plant / Add New Plant
 ```
-FAB → Identify plant
+FAB → Scan plant
 ─────────────────────────────────────────
 [ Camera / scan screen ]
         ↓
@@ -143,18 +143,16 @@ FAB → Identify plant
   Species name + common name
   Care info: light, water needs, difficulty
   [ Add to my collection ]   [ Done ]
+     (jumps to Confirm plant details, pre-filled)
 
 
 FAB → Add new plant
 ─────────────────────────────────────────
-[ Scan to identify ]   [ Enter manually ]
-        ↓
-
 [ Confirm plant details ]
 ─────────────────────────────────────────
 Photo: [ camera / gallery ]
 Nickname: [___________]
-Species: [___________]  (pre-filled if scanned)
+Species: [___________]
 Location: [___________]  (optional)
 
 Care schedule
@@ -521,9 +519,10 @@ WELCOME / FIRST PLANT
 ─────────────────────────────────────────
 "Let's add your first plant"
 
-[ Identify plant ]   [ Add manually ]   [ Skip for now ]
+[ Scan plant ]   [ Add manually ]   [ Skip for now ]
 
-→ leads into Add Plant flow (§4.4)
+→ "Scan plant" leads into Scan Plant flow (§4.4)
+→ "Add manually" leads into Add New Plant flow (§4.4)
 → "Skip" → straight to Home (empty state, §5.9)
 
 
@@ -549,7 +548,7 @@ Home — Care Tasks, nothing due
 Collection — no plants yet
   "Your collection is empty.
    Add your first plant to get started."
-  [ + Add new plant ]   [ Identify a plant ]
+  [ + Add new plant ]   [ Scan a plant ]
 
 Notifications — none yet
   "Nothing here yet — likes, comments,
@@ -706,8 +705,11 @@ Photo and info sit side-by-side instead of stacked; notes/photos span full width
 ### 7.4 Edit Plant
 Same two-column split as Plant Detail: photo/upload on the left, form fields (nickname, species, location, care schedule, custom tasks) on the right. Appears as a centered modal over Plant Detail rather than a full page.
 
-### 7.5 Add Plant / Identify Plant
-The camera/scan step and "Confirm plant details" form appear as a **centered modal/dialog** over the current page (Home or Collection), rather than a full-screen takeover. Layout inside the modal: photo/preview on the left, form fields (nickname, species, location, care schedule + custom tasks) on the right. Closing the modal returns to the underlying page unchanged.
+### 7.5 Scan Plant / Add New Plant
+
+**Scan plant**: the camera/scan step and result screen appear as a **centered modal/dialog** over the current page. Tapping "Add to my collection" transitions the same modal into the "Confirm plant details" form. Closing the modal returns to the underlying page unchanged.
+
+**Add new plant**: the "Confirm plant details" form appears directly as a **centered modal/dialog** over the current page, with photo/preview on the left and form fields (nickname, species, location, care schedule + custom tasks) on the right. Closing the modal returns to the underlying page unchanged.
 
 ### 7.6 Add Care Task
 Same modal treatment — "For: [plant(s)]", task name, due date, repeat toggle, all in a single centered dialog over Home.

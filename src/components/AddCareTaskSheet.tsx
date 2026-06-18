@@ -282,7 +282,7 @@ export default function AddCareTaskSheet({ open, onOpenChange }: AddCareTaskShee
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto">
           {content}
         </SheetContent>
       </Sheet>
@@ -291,7 +291,7 @@ export default function AddCareTaskSheet({ open, onOpenChange }: AddCareTaskShee
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
         {content}
       </DialogContent>
     </Dialog>

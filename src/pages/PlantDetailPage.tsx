@@ -4,12 +4,12 @@ import {
   Share2, 
   Edit3, 
   Trash2, 
-  Check, 
   Plus, 
   ChevronRight,
   Calendar,
   Loader2
 } from "lucide-react";
+import TaskTypeIcon from "@/components/TaskTypeIcon";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -106,23 +106,7 @@ function getTaskDisplayName(entry: CareLogEntry): string {
   return entry.care_type.charAt(0).toUpperCase() + entry.care_type.slice(1);
 }
 
-// Get task icon
-function getTaskIcon(careType: string): string {
-  switch (careType.toLowerCase()) {
-    case "water":
-      return "💧";
-    case "fertilize":
-      return "🧪";
-    case "repot":
-      return "🪴";
-    case "prune":
-      return "✂️";
-    case "note":
-      return "📝";
-    default:
-      return "✓";
-  }
-}
+
 
 export default function PlantDetailPage() {
   const navigate = useNavigate();

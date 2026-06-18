@@ -1,7 +1,20 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import TaskTypeIcon from "@/components/TaskTypeIcon";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useCareTaskHistory } from "@/queries/careTasks";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useCareTaskHistory, useClearCareHistory } from "@/queries/careTasks";
 import { formatRelativeTime } from "@/queries/careTasks";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface CareHistorySheetProps {
   open: boolean;
@@ -64,31 +77,28 @@ function getTaskDisplayName(entry: CareLogEntry): string {
   return entry.care_type.charAt(0).toUpperCase() + entry.care_type.slice(1);
 }
 
-function getTaskIcon(careType: string): string {
-  switch (careType.toLowerCase()) {
-    case "water":
-      return "💧";
-    case "fertilize":
-      return "🧪";
-    case "repot":
-      return "🪴";
-    case "prune":
-      return "✂️";
-    case "note":
-      return "📝";
-    default:
-      return "✓";
-  }
-}
+
 
 export default function CareHistorySheet({ open, onOpenChange, plantId, plantName }: CareHistorySheetProps) {
   const { data: careLogs = [], isLoading } = useCareTaskHistory(plantId);
+  const clearHistory = useClearCareHistory();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   const groupedLogs = groupByMonthYear(careLogs as unknown as CareLogEntry[]);
 
+  const handleClear = async () => {
+    try {
+      await clearHistory.mutateAsync(plantId);
+      toast.success("Care history cleared");
+      setShowClearConfirm(false);
+    } catch {
+      toast.error("Failed to clear care history");
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-hidden flex flex-col">
         <SheetHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -100,9 +110,20 @@ export default function CareHistorySheet({ open, onOpenChange, plantId, plantNam
               </button>
               <SheetTitle>Care History</SheetTitle>
             </div>
-            {plantName && (
-              <span className="text-sm text-muted-foreground">{plantName}</span>
-            )}
+            <div className="flex items-center gap-2">
+              {careLogs.length > 0 && (
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  className="w-8 h-8 rounded-full bg-muted hover:bg-destructive/10 flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+                  aria-label="Clear history"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+              {plantName && (
+                <span className="text-sm text-muted-foreground hidden sm:inline">{plantName}</span>
+              )}
+            </div>
           </div>
         </SheetHeader>
 
@@ -132,8 +153,8 @@ export default function CareHistorySheet({ open, onOpenChange, plantId, plantNam
                         className="flex items-start gap-3 p-3 rounded-xl bg-card border"
                       >
                         {/* Icon */}
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-lg shrink-0">
-                          {getTaskIcon(entry.care_type)}
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                          <TaskTypeIcon type={entry.care_type} size={18} className="text-muted-foreground" />
                         </div>
                         
                         {/* Content */}
@@ -174,6 +195,27 @@ export default function CareHistorySheet({ open, onOpenChange, plantId, plantNam
           )}
         </div>
       </SheetContent>
+
+      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear care history?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all care logs for {plantName || "this plant"}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleClear}
+              disabled={clearHistory.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {clearHistory.isPending ? "Clearing..." : "Clear History"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

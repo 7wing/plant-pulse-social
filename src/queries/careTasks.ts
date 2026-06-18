@@ -15,19 +15,6 @@ interface CareTaskWithPlant extends CareTask {
   } | null;
 }
 
-// Task type icons mapping
-export const TASK_TYPE_ICONS: Record<string, string> = {
-  water: "💧",
-  fertilize: "🧪",
-  repot: "🪴",
-  prune: "✂️",
-  default: "⭐",
-};
-
-export function getTaskTypeIcon(taskType: string): string {
-  return TASK_TYPE_ICONS[taskType.toLowerCase()] || TASK_TYPE_ICONS.default;
-}
-
 // Get today's date at midnight (start of day)
 function getStartOfToday(): Date {
   const today = new Date();
@@ -53,30 +40,30 @@ function getDaysFromNow(days: number): Date {
 // Format due date to readable string
 export function formatDueDate(dueDate: string | null): string {
   if (!dueDate) return "No date";
-  
+
   const due = new Date(dueDate);
   const today = getStartOfToday();
   const todayEnd = getEndOfToday();
   const tomorrow = getDaysFromNow(1);
   const yesterday = getDaysFromNow(-1);
-  
+
   // Due today
   if (due <= todayEnd && due >= today) {
     return "today";
   }
-  
+
   // Due tomorrow
   if (due >= tomorrow && due < getDaysFromNow(2)) {
     return "tomorrow";
   }
-  
+
   // Due in the past (yesterday or earlier)
   if (due < today) {
     const diffDays = Math.ceil((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays === 1) return "yesterday";
     return `${diffDays} days ago`;
   }
-  
+
   // Due in the future
   const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
   return `in ${diffDays} days`;
@@ -85,14 +72,14 @@ export function formatDueDate(dueDate: string | null): string {
 // Format relative time (for care history)
 export function formatRelativeTime(dateString: string | null): string {
   if (!dateString) return "";
-  
+
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const diffWeeks = Math.floor(diffDays / 7);
   const diffMonths = Math.floor(diffDays / 30);
-  
+
   if (diffDays === 0) return "today";
   if (diffDays === 1) return "yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
@@ -107,7 +94,7 @@ export function formatRelativeTime(dateString: string | null): string {
 export function getTodayTasks(tasks: CareTaskWithPlant[]): CareTaskWithPlant[] {
   const todayStart = getStartOfToday();
   const todayEnd = getEndOfToday();
-  
+
   return tasks.filter((task) => {
     if (task.completed_at) return false;
     if (!task.due_date) return false;
@@ -120,7 +107,7 @@ export function getTodayTasks(tasks: CareTaskWithPlant[]): CareTaskWithPlant[] {
 export function getUpcomingTasks(tasks: CareTaskWithPlant[]): CareTaskWithPlant[] {
   const tomorrow = getDaysFromNow(1);
   const sevenDaysFromNow = getDaysFromNow(7);
-  
+
   return tasks.filter((task) => {
     if (task.completed_at) return false;
     if (!task.due_date) return false;
@@ -134,7 +121,7 @@ export function getUpcomingTasks(tasks: CareTaskWithPlant[]): CareTaskWithPlant[
 // Get overdue tasks (due_date < today, completed_at IS NULL)
 export function getOverdueTasks(tasks: CareTaskWithPlant[]): CareTaskWithPlant[] {
   const todayStart = getStartOfToday();
-  
+
   return tasks.filter((task) => {
     if (task.completed_at) return false;
     if (!task.due_date) return false;
@@ -339,7 +326,7 @@ export function useCareTaskHistoryLast30Days(plantId?: string) {
     queryFn: async () => {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       let query = supabase
         .from("care_logs")
         .select("*, care_tasks(task_name, task_type)")
@@ -400,11 +387,11 @@ export function usePlantCareScore(plantId?: string) {
 
       if (logsError) throw logsError;
 
-      // Calculate scheduled tasks (each recurring task has a schedule, 
+      // Calculate scheduled tasks (each recurring task has a schedule,
       // so we estimate based on the repeat interval)
       const scheduledTaskCount = careTasks.reduce((count, task) => {
         if (!task.due_date || !task.repeat_interval) return count;
-        
+
         // Calculate how many times this task should have been done in 30 days
         let daysPerOccurrence = 0;
         switch (task.repeat_unit) {
@@ -420,7 +407,7 @@ export function usePlantCareScore(plantId?: string) {
           default:
             daysPerOccurrence = task.repeat_interval;
         }
-        
+
         if (daysPerOccurrence > 0) {
           count += Math.ceil(30 / daysPerOccurrence);
         }
@@ -430,17 +417,17 @@ export function usePlantCareScore(plantId?: string) {
       // Check on-time completions
       // A completion is on-time if it was done within 1 day of the scheduled due date
       let onTimeCount = 0;
-      
+
       for (const log of careLogs) {
         if (!log.scheduled_due || !log.logged_at) continue;
-        
+
         const scheduledDate = new Date(log.scheduled_due);
         const loggedDate = new Date(log.logged_at);
-        
+
         // Calculate the difference in days
         const diffMs = Math.abs(loggedDate.getTime() - scheduledDate.getTime());
         const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        
+
         // On-time if completed within 1 day of scheduled date
         if (diffDays <= 1) {
           onTimeCount++;
@@ -449,11 +436,11 @@ export function usePlantCareScore(plantId?: string) {
 
       // If no scheduled tasks, default to 100%
       if (scheduledTaskCount === 0) {
-        return { 
-          score: 100, 
-          onTimeCount: careLogs.length, 
+        return {
+          score: 100,
+          onTimeCount: careLogs.length,
           totalCount: careLogs.length,
-          hasScheduledTasks: false 
+          hasScheduledTasks: false
         };
       }
 
@@ -462,9 +449,29 @@ export function usePlantCareScore(plantId?: string) {
         score: Math.min(100, Math.max(0, score)), 
         onTimeCount, 
         totalCount: scheduledTaskCount,
-        hasScheduledTasks: true
+        hasScheduledTasks: true 
       };
     },
     enabled: !!user?.id && !!plantId,
+  });
+}
+
+export function useClearCareHistory() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (plantId: string) => {
+      const { error } = await supabase
+        .from("care_logs")
+        .delete()
+        .eq("plant_id", plantId)
+        .eq("user_id", user!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["careTaskHistory"] });
+      queryClient.invalidateQueries({ queryKey: ["careScore"] });
+    },
   });
 }

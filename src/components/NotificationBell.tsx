@@ -1,4 +1,4 @@
-import { Bell, Loader2 } from "lucide-react";
+import { Bell, Loader2, Sprout, Heart, MessageCircle, User, Trophy, XCircle, Calendar, Award } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUnreadNotificationCount, useNotifications, useMarkNotificationRead, type NotificationWithActor } from "@/queries/notifications";
@@ -18,19 +18,20 @@ type NotificationMetadata = {
   event_title?: string;
 };
 
-function getNotificationIcon(type: string): string {
-  const iconMap: Record<string, string> = {
-    care_reminder: "🌱",
-    like: "❤️",
-    comment: "💬",
-    follow: "👤",
-    proposal_approved: "🏆",
-    proposal_rejected: "❌",
-    challenge_reminder: "📅",
-    event_reminder: "📅",
-    badge: "🏅",
-  };
-  return iconMap[type] || "🔔";
+const iconMap: Record<string, React.ReactNode> = {
+  care_reminder: <Sprout size={16} className="text-primary" />,
+  like: <Heart size={16} className="text-destructive" />,
+  comment: <MessageCircle size={16} className="text-primary" />,
+  follow: <User size={16} className="text-primary" />,
+  proposal_approved: <Trophy size={16} className="text-plant-warning" />,
+  proposal_rejected: <XCircle size={16} className="text-destructive" />,
+  challenge_reminder: <Calendar size={16} className="text-primary" />,
+  event_reminder: <Calendar size={16} className="text-primary" />,
+  badge: <Award size={16} className="text-primary" />,
+};
+
+function getNotificationIcon(type: string): React.ReactNode {
+  return iconMap[type?.toLowerCase()] || <Bell size={16} className="text-muted-foreground" />;
 }
 
 function isToday(dateStr: string): boolean {
@@ -88,7 +89,7 @@ function NotificationDropdownItem({ notification, onTap, isLoading }: Notificati
         isUnread ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/60"
       )}
     >
-      <span className="text-base shrink-0">
+      <span className="shrink-0">
         {getNotificationIcon(notification.type)}
       </span>
       <div className="flex-1 min-w-0">

@@ -1,13 +1,11 @@
-import { Search, Globe } from "lucide-react";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Search, Globe, Grid3X3, List } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import SectionHeader from "@/components/SectionHeader";
 import PlantLibraryCard from "@/components/PlantLibraryCard";
-import PlantScanSheet from "@/components/PlantScanSheet";
-import { identifyPlant } from "@/lib/plantnet";
-import type { PlantSuggestion } from "@/lib/plantnet";
-import { usePlantLibrarySearch } from "@/queries/plantLibrary";
+import CareGuideCard from "@/components/CareGuideCard";
+import { CareGuideSheet } from "@/components/CareGuideSheet";
+import { usePlantLibrarySearch, usePlantLibraryAll } from "@/queries/plantLibrary";
 import type { PlantLibraryEntry } from "@/queries/plantLibrary";
 
 const categories = ["All", "Indoor", "Succulents", "Rare", "Propagation", "Gardening", "Tropical", "Cacti"];
@@ -25,17 +23,14 @@ const categorySearchTerms: Record<string, string> = {
 };
 
 export default function ExplorePage() {
-  const navigate = useNavigate();
   const [active, setActive] = useState("All");
+  const [view, setView] = useState<"grid" | "list">("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [scanOpen, setScanOpen] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [scanResults, setScanResults] = useState<PlantSuggestion[] | null>(null);
-  const [scanError, setScanError] = useState<string | null>(null);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
   const [onlineResults, setOnlineResults] = useState<PlantLibraryEntry[]>([]);
-  const scanInputRef = useRef<HTMLInputElement>(null);
+  const [selectedGuideId, setSelectedGuideId] = useState<string | null>(null);
+  const [guideSheetOpen, setGuideSheetOpen] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Determine what query to use (search or category)
@@ -62,6 +57,9 @@ export default function ExplorePage() {
     effectiveQuery.length > 1 ? effectiveQuery : ""
   );
 
+  // Query all plants for the popular section
+  const { data: allEntries = [], isLoading: isAllLoading } = usePlantLibraryAll();
+
   // Show loading skeletons when searching
   const isLoading = isLibraryLoading || isSearchingOnline;
 
@@ -69,6 +67,7 @@ export default function ExplorePage() {
   const showOnlineSearch =
     effectiveQuery.length >= 2 &&
     !isLoading &&
+    !isLibraryLoading &&
     libraryResults.length === 0 &&
     onlineResults.length === 0;
 
@@ -98,38 +97,14 @@ export default function ExplorePage() {
       if (data && data.result) {
         const result = data.result;
         setOnlineResults([result]);
-
-        // Invalidate the library query to refetch
-        // The queryClient will be invalidated via react-query
-        // For now, the results are shown directly
       } else {
         toast.error("No results found online either");
       }
     } catch (err) {
-      toast.error("Failed to search online. Please try again.");
-      console.error(err);
+      // silent failure
     } finally {
       setIsSearchingOnline(false);
     }
-  };
-
-  // Handle scan
-  const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setScanning(true);
-    setScanError(null);
-    setScanOpen(true);
-    try {
-      const results = await identifyPlant(file);
-      setScanResults(results);
-    } catch (err) {
-      setScanError(err instanceof Error ? err.message : "Identification failed");
-      toast.error("Scan failed. Please try again.");
-    } finally {
-      setScanning(false);
-    }
-    e.target.value = "";
   };
 
   // Handle clear search
@@ -146,7 +121,7 @@ export default function ExplorePage() {
   const showPopular = effectiveQuery.length < 2 && active === "All";
 
   return (
-    <div className="pb-20 md:pb-4 min-h-screen">
+    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-2">
         <h1 className="text-xl font-bold mb-3">Explore</h1>
@@ -176,26 +151,42 @@ export default function ExplorePage() {
               </button>
             )}
           </div>
+          <button
+            onClick={() => setView(view === "grid" ? "list" : "grid")}
+            className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors shrink-0 md:hidden"
+            aria-label="Toggle view"
+          >
+            {view === "grid" ? <List size={18} /> : <Grid3X3 size={18} />}
+          </button>
         </div>
       </div>
 
-      {/* Category chips */}
-      <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-hide">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => {
-              setActive(cat);
-              if (cat !== "All") {
-                setSearchQuery("");
-                setOnlineResults([]);
-              }
-            }}
-            className={active === cat ? "chip-active" : "chip"}
-          >
-            {cat}
-          </button>
-        ))}
+      {/* Category chips + Grid/List Toggle */}
+      <div className="flex items-center gap-2 px-4 py-3">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => {
+                setActive(cat);
+                if (cat !== "All") {
+                  setSearchQuery("");
+                  setOnlineResults([]);
+                }
+              }}
+              className={active === cat ? "chip-active" : "chip"}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setView(view === "grid" ? "list" : "grid")}
+          className="hidden md:block p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors shrink-0"
+          aria-label="Toggle view"
+        >
+          {view === "grid" ? <List size={18} /> : <Grid3X3 size={18} />}
+        </button>
       </div>
 
       {/* Results section */}
@@ -227,11 +218,33 @@ export default function ExplorePage() {
               ))}
             </div>
           ) : displayResults.length > 0 ? (
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-              {displayResults.map((entry) => (
-                <PlantLibraryCard key={entry.id} entry={entry} />
-              ))}
-            </div>
+            view === "grid" ? (
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+                {displayResults.map((entry) => (
+                  <PlantLibraryCard
+                    key={entry.id}
+                    entry={entry}
+                    onClick={() => {
+                      setSelectedGuideId(entry.id);
+                      setGuideSheetOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3 px-4 pb-4">
+                {displayResults.map((entry) => (
+                  <CareGuideCard
+                    key={entry.id}
+                    entry={entry}
+                    onClick={() => {
+                      setSelectedGuideId(entry.id);
+                      setGuideSheetOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
+            )
           ) : showOnlineSearch ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <Globe size={48} className="text-muted-foreground mb-4" />
@@ -257,11 +270,11 @@ export default function ExplorePage() {
         <>
           {/* Popular Plants - from plant library */}
           <SectionHeader
-            title="Popular Plants 🌿"
+            title="Popular Plants"
             subtitle="Curated care guides"
           />
 
-          {isLibraryLoading ? (
+          {isAllLoading ? (
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
@@ -276,12 +289,34 @@ export default function ExplorePage() {
                 </div>
               ))}
             </div>
-          ) : libraryResults.length > 0 ? (
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-              {libraryResults.slice(0, 12).map((entry) => (
-                <PlantLibraryCard key={entry.id} entry={entry} />
-              ))}
-            </div>
+          ) : allEntries.length > 0 ? (
+            view === "grid" ? (
+              <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
+                {allEntries.slice(0, 12).map((entry) => (
+                  <PlantLibraryCard
+                    key={entry.id}
+                    entry={entry}
+                    onClick={() => {
+                      setSelectedGuideId(entry.id);
+                      setGuideSheetOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3 px-4 pb-4">
+                {allEntries.slice(0, 12).map((entry) => (
+                  <CareGuideCard
+                    key={entry.id}
+                    entry={entry}
+                    onClick={() => {
+                      setSelectedGuideId(entry.id);
+                      setGuideSheetOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
+            )
           ) : (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <p className="text-sm text-muted-foreground text-center">
@@ -290,45 +325,14 @@ export default function ExplorePage() {
             </div>
           )}
 
-          {/* Quick start: scan to identify */}
-          <div className="mx-4 mt-4 p-4 bg-muted/50 rounded-2xl">
-            <p className="text-sm text-muted-foreground text-center">
-              Have a plant you want to learn about?{" "}
-              <button
-                onClick={() => scanInputRef.current?.click()}
-                className="text-primary font-semibold hover:underline"
-              >
-                Scan to identify
-              </button>
-            </p>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              ref={scanInputRef}
-              onChange={handleScan}
-              className="hidden"
-            />
-          </div>
+
         </>
       ) : null}
 
-      {/* Plant Scan Sheet */}
-      <PlantScanSheet
-        open={scanOpen}
-        onOpenChange={(open) => {
-          setScanOpen(open);
-          if (!open) {
-            setScanResults(null);
-            setScanError(null);
-          }
-        }}
-        results={scanResults}
-        loading={scanning}
-        onViewGuide={(speciesName) => {
-          setScanOpen(false);
-          setSearchQuery(speciesName);
-        }}
+      <CareGuideSheet
+        entryId={selectedGuideId}
+        open={guideSheetOpen}
+        onOpenChange={setGuideSheetOpen}
       />
     </div>
   );

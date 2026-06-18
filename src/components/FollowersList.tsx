@@ -138,14 +138,8 @@ export function FollowersList({ userId, initialTab = "followers", open, onOpenCh
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="rounded-t-3xl h-[80vh]">
+        <SheetContent side="bottom" className="rounded-t-3xl max-h-[80dvh]">
           <SheetHeader className="pb-4">
-            <button
-              onClick={() => onOpenChange(false)}
-              className="absolute right-4 top-4 w-8 h-8 rounded-full hover:bg-muted flex items-center justify-center"
-            >
-              <X size={18} />
-            </button>
             <SheetTitle>Followers</SheetTitle>
           </SheetHeader>
           {listContent}

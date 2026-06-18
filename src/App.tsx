@@ -104,7 +104,7 @@ function AppLayout() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       </ErrorBoundary>
-      {!hideNav && isMobile && <FAB />}
+      {!hideNav && <FAB />}
     </div>
   );
 }

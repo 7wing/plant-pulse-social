@@ -19,15 +19,15 @@ Build a complete Notifications system for PlantPal with:
 ## Notification Types and Icons
 | Type | Icon | Deep Link |
 |------|------|-----------|
-| care_reminder | 🌱 | /plant/{plant_id} |
-| like | ❤️ | /community |
-| comment | 💬 | /community |
-| follow | 👤 | /profile/{follower_id} |
-| proposal_approved | 🏆 | /community |
-| proposal_rejected | ❌ | /community |
-| challenge_reminder | 📅 | /community |
-| event_reminder | 📅 | /community |
-| badge | 🏅 | /profile |
+| care_reminder | Sprout | /plant/{plant_id} |
+| like | Heart | /community |
+| comment | MessageCircle | /community |
+| follow | User | /profile/{follower_id} |
+| proposal_approved | Trophy | /community |
+| proposal_rejected | XCircle | /community |
+| challenge_reminder | Calendar | /community |
+| event_reminder | Calendar | /community |
+| badge | Award | /profile |
 
 ## Grouping Logic
 Group notifications by:

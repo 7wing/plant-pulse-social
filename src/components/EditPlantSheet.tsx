@@ -417,7 +417,7 @@ export default function EditPlantSheet({ open, onOpenChange, plant }: EditPlantS
     <>
       {isMobile ? (
         <Sheet open={open} onOpenChange={onOpenChange}>
-          <SheetContent side="bottom" className="rounded-t-3xl max-h-[90vh] overflow-y-auto pb-8">
+          <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto pb-8">
             {modalContent}
           </SheetContent>
         </Sheet>

@@ -86,7 +86,7 @@ test.describe('Care Tasks', () => {
     
     // Either empty state or task list should be visible
     const hasEmptyState = await emptyState.isVisible();
-    const hasTasks = await addButton.isVisible() || await page.locator('button:has-text("✓")').first().isVisible().catch(() => false);
+    const hasTasks = await addButton.isVisible() || await page.locator('text=Completed').first().isVisible().catch(() => false);
     
     expect(hasEmptyState || hasTasks).toBeTruthy();
   });
@@ -96,13 +96,23 @@ test.describe('Add Care Task Form', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
-    
-    // Open Add Care Task sheet
+
+    // Try inline button first (mobile), then FAB (desktop)
     const addButton = page.locator('button:has-text("Add care task")').first();
     if (await addButton.isVisible()) {
       await addButton.click();
-      await page.waitForSelector('text=Add Care Task');
+    } else {
+      // Desktop: open via FAB
+      const fab = page.locator('[data-testid="fab"]');
+      if (await fab.isVisible()) {
+        await fab.click();
+        const fabOption = page.locator('button[aria-label="Add care task"]');
+        if (await fabOption.isVisible()) {
+          await fabOption.click();
+        }
+      }
     }
+    await page.waitForSelector('text=Add Care Task');
   });
 
   test('should show plant selection options', async ({ page }) => {

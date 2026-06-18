@@ -129,7 +129,7 @@ export default function ProposeChallengeSheet({ open, onOpenChange }: ProposeCha
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85vh] overflow-y-auto">
+      <SheetContent side="bottom" className="rounded-t-3xl max-h-[85dvh] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Propose a Challenge or Event</SheetTitle>
         </SheetHeader>

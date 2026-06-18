@@ -1,6 +1,7 @@
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, Leaf } from "lucide-react";
+import TaskTypeIcon from "@/components/TaskTypeIcon";
 import { useMemo } from "react";
-import { getTaskTypeIcon, formatDueDate } from "@/queries/careTasks";
+import { formatDueDate } from "@/queries/careTasks";
 import type { CareTaskWithPlant } from "@/queries/careTasks";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +21,6 @@ function CareTaskCard({ task, onComplete, isCompleting }: CareTaskCardProps) {
     return text;
   }, [isCompleted, task.completed_at, task.due_date]);
 
-  const taskIcon = useMemo(() => getTaskTypeIcon(task.task_type), [task.task_type]);
   const plantName = task.plants?.nickname || "Unknown plant";
 
   const handleClick = () => {
@@ -72,9 +72,7 @@ function CareTaskCard({ task, onComplete, isCompleting }: CareTaskCardProps) {
       </div>
 
       {/* Task type icon */}
-      <span className="text-lg flex-shrink-0" role="img" aria-label={task.task_type}>
-        {taskIcon}
-      </span>
+      <TaskTypeIcon type={task.task_type} size={18} className="flex-shrink-0 text-muted-foreground" />
     </button>
   );
 }
@@ -85,7 +83,7 @@ interface CareTaskListProps {
   onComplete: (taskId: string) => void;
   completingTaskId?: string | null;
   emptyMessage?: string;
-  emptyIcon?: string;
+  emptyIcon?: React.ReactNode;
 }
 
 export default function CareTaskList({
@@ -94,7 +92,7 @@ export default function CareTaskList({
   onComplete,
   completingTaskId,
   emptyMessage = "No tasks",
-  emptyIcon = "🌿",
+  emptyIcon,
 }: CareTaskListProps) {
   return (
     <div className="space-y-2">
@@ -106,7 +104,7 @@ export default function CareTaskList({
       
       {tasks.length === 0 ? (
         <div className="text-center py-6 px-4">
-          <span className="text-2xl" role="img" aria-hidden="true">{emptyIcon}</span>
+          {emptyIcon && <div className="flex justify-center">{emptyIcon}</div>}
           <p className="text-sm text-muted-foreground mt-2">{emptyMessage}</p>
         </div>
       ) : (

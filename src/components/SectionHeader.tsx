@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 
 interface SectionHeaderProps {
   title: string;
-  action?: string;
+  action?: React.ReactNode | string | undefined;
   actionPath?: string;
   subtitle?: string;
 }
 
-export default function SectionHeader({ title, action = "See all", actionPath, subtitle }: SectionHeaderProps) {
+export default function SectionHeader({ title, action, actionPath, subtitle }: SectionHeaderProps) {
   const navigate = useNavigate();
 
   return (
@@ -17,19 +17,21 @@ export default function SectionHeader({ title, action = "See all", actionPath, s
         <h2 className="text-base font-bold">{title}</h2>
         {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
       </div>
-      {actionPath ? (
-        <button
-          onClick={() => navigate(actionPath)}
-          className="flex items-center gap-0.5 text-xs text-primary font-semibold"
-        >
-          {action}
-          <ChevronRight size={14} />
-        </button>
-      ) : (
-        <button className="flex items-center gap-0.5 text-xs text-primary font-semibold">
-          {action}
-          <ChevronRight size={14} />
-        </button>
+      {action !== undefined && (
+        actionPath ? (
+          <button
+            onClick={() => navigate(actionPath)}
+            className="flex items-center gap-0.5 text-xs text-primary font-semibold"
+          >
+            {action}
+            <ChevronRight size={14} />
+          </button>
+        ) : (
+          <span className="flex items-center gap-0.5 text-xs text-primary font-semibold">
+            {action}
+            <ChevronRight size={14} />
+          </span>
+        )
       )}
     </div>
   );
