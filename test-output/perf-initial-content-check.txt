@@ -1,4 +1,0 @@
-[initial-content-check]
-{
-  "hasGreeting": false
-}
