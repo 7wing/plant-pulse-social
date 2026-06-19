@@ -53,6 +53,9 @@ export default function CareGuideCard({ entry, onClick }: CareGuideCardProps) {
             alt={entry.common_name || entry.species_name || "Plant"}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE;
+            }}
           />
         </div>
         <div className="flex-1 min-w-0">

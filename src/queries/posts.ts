@@ -25,7 +25,7 @@ export function useFeedPosts(followingOnly = false) {
       let query = supabase
         .from("posts")
         .select(
-          "*, profiles:author_id(username, avatar_url, display_name)"
+          "*, comment_counts:comments(count), like_counts:likes(count), profiles:author_id(username, avatar_url, display_name)"
         )
         .order("created_at", { ascending: false })
         .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
@@ -47,7 +47,11 @@ export function useFeedPosts(followingOnly = false) {
       const { data, error } = await query;
 
       if (error) throw error;
-      return (data ?? []) as PostWithAuthor[];
+      return ((data ?? []) as any[]).map((row) => ({
+        ...row,
+        comments_count: row.comment_counts?.[0]?.count ?? row.comments_count,
+        likes_count: row.like_counts?.[0]?.count ?? row.likes_count,
+      })) as PostWithAuthor[];
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
@@ -113,11 +117,6 @@ export function useLikePost() {
         .from("likes")
         .insert({ post_id: postId, user_id: user!.id });
       if (error) throw error;
-
-      const { error: rpcError } = await supabase.rpc("increment_likes", {
-        p_post_id: postId,
-      });
-      if (rpcError) throw rpcError;
     },
     onMutate: async (postId: string) => {
       await queryClient.cancelQueries({ queryKey: ["feed", "posts"] });
@@ -170,11 +169,6 @@ export function useUnlikePost() {
         .eq("post_id", postId)
         .eq("user_id", user!.id);
       if (error) throw error;
-
-      const { error: rpcError } = await supabase.rpc("decrement_likes", {
-        p_post_id: postId,
-      });
-      if (rpcError) throw rpcError;
     },
     onMutate: async (postId: string) => {
       await queryClient.cancelQueries({ queryKey: ["feed", "posts"] });
@@ -281,12 +275,21 @@ export function useSavedPosts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("saved_posts")
-        .select("post_id, posts(*, profiles:author_id(username, avatar_url, display_name))")
+        .select(
+          "post_id, posts(*, comment_counts:comments(count), like_counts:likes(count), profiles:author_id(username, avatar_url, display_name))"
+        )
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data ?? []).map((row) => row.posts) as PostWithAuthor[];
+      return ((data ?? []) as any[]).map((row) => {
+        const post = row.posts;
+        return {
+          ...post,
+          comments_count: post?.comment_counts?.[0]?.count ?? post?.comments_count,
+          likes_count: post?.like_counts?.[0]?.count ?? post?.likes_count,
+        };
+      }) as PostWithAuthor[];
     },
     enabled: !!user?.id,
   });
@@ -300,12 +303,21 @@ export function useLikedPosts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("likes")
-        .select("post_id, posts(*, profiles:author_id(username, avatar_url, display_name))")
+        .select(
+          "post_id, posts(*, comment_counts:comments(count), like_counts:likes(count), profiles:author_id(username, avatar_url, display_name))"
+        )
         .eq("user_id", user!.id)
         .order("post_id", { ascending: false });
 
       if (error) throw error;
-      return (data ?? []).map((row) => row.posts) as PostWithAuthor[];
+      return ((data ?? []) as any[]).map((row) => {
+        const post = row.posts;
+        return {
+          ...post,
+          comments_count: post?.comment_counts?.[0]?.count ?? post?.comments_count,
+          likes_count: post?.like_counts?.[0]?.count ?? post?.likes_count,
+        };
+      }) as PostWithAuthor[];
     },
     enabled: !!user?.id,
   });
@@ -327,13 +339,19 @@ export function useChallengePosts(challengeId?: string, tag?: string, limit = 20
       // Search for posts that contain the tag in their tags array
       const { data, error } = await supabase
         .from("posts")
-        .select("*, profiles:author_id(username, avatar_url, display_name)")
+        .select(
+          "*, comment_counts:comments(count), like_counts:likes(count), profiles:author_id(username, avatar_url, display_name)"
+        )
         .contains("tags", [tag])
         .order("created_at", { ascending: false })
         .limit(limit);
 
       if (error) throw error;
-      return (data ?? []) as PostWithAuthor[];
+      return ((data ?? []) as any[]).map((row) => ({
+        ...row,
+        comments_count: row.comment_counts?.[0]?.count ?? row.comments_count,
+        likes_count: row.like_counts?.[0]?.count ?? row.likes_count,
+      })) as PostWithAuthor[];
     },
     enabled: !!tag,
   });

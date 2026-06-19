@@ -175,7 +175,7 @@ export default function AdminLibraryPage() {
       light: entry.light || "",
       water: entry.water || "",
       difficulty: entry.difficulty || "",
-      toxicity: entry.toxicity || "",
+      toxicity: entry.toxicity_to_pets || "",
       image_url: entry.image_url || "",
     });
   };
@@ -193,7 +193,7 @@ export default function AdminLibraryPage() {
           light: editFormData.light || null,
           water: editFormData.water || null,
           difficulty: editFormData.difficulty || null,
-          toxicity: editFormData.toxicity || null,
+          toxicity_to_pets: editFormData.toxicity || null,
           image_url: editFormData.image_url || null,
         },
       });

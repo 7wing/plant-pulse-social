@@ -30,7 +30,7 @@ import { usePlants } from "@/queries/plants";
 import { useUpload } from "@/hooks/useUpload";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useChallenges } from "@/queries/challenges";
-import { useUserSearch, useTagSearch } from "@/queries/search";
+import { useUserSearch, useTagSearch, useTrendingTags } from "@/queries/search";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -92,6 +92,7 @@ export default function CommunityPage() {
   // User search for search tab
   const { data: userResults } = useUserSearch(searchQuery);
   const { data: tagResults } = useTagSearch(searchQuery);
+  const { data: trendingTags = [] } = useTrendingTags();
 
   const filteredPosts = useMemo(() => {
     if (!searchQuery.trim()) return posts;
@@ -405,20 +406,19 @@ export default function CommunityPage() {
                 <span className="text-xs font-semibold text-primary">Trending</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {[
-                  "#Monstera",
-                  "#PropagationTips",
-                  "#RarePlants",
-                  "#PlantShelfie",
-                ].map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => setSearchQuery(tag.replace("#", ""))}
-                    className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium cursor-pointer hover:bg-primary/20 transition-colors"
-                  >
-                    {tag}
-                  </button>
-                ))}
+                {trendingTags.length > 0 ? (
+                  trendingTags.map((tag) => (
+                    <button
+                      key={tag}
+                      onClick={() => setSearchQuery(tag)}
+                      className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium cursor-pointer hover:bg-primary/20 transition-colors"
+                    >
+                      #{tag}
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-xs text-muted-foreground">No trending tags</p>
+                )}
               </div>
             </div>
           </div>

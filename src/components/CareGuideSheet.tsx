@@ -15,6 +15,7 @@ import {
   useSaveGuide,
   useUnsaveGuide,
 } from "@/queries/plantLibrary";
+import { getToxicityDisplay } from "@/lib/plantLibraryUtils";
 import { useAddPlant } from "@/queries/plants";
 import { useQueryClient } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -157,11 +158,13 @@ export function CareGuideSheet({
       <div className="flex-1">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-sm font-medium">
-          {value || "Care info not available yet"}
+          {value && value.trim() ? value : "Care info not available yet"}
         </p>
       </div>
     </div>
   );
+
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -373,6 +376,9 @@ export function CareGuideSheet({
                       src={entry.image_url || DEFAULT_IMAGE}
                       alt={entry.common_name || entry.species_name || "Plant"}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE;
+                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-foreground/10" />
                   </div>
@@ -410,14 +416,14 @@ export function CareGuideSheet({
                             Difficulty
                           </p>
                           <p className="text-sm font-medium capitalize">
-                            {entry.difficulty || "Not available"}
+                            {entry.difficulty && entry.difficulty.trim() ? entry.difficulty : "Care info not available yet"}
                           </p>
                         </div>
                       </div>
                       <CareInfoRow
                         icon={AlertTriangle}
                         label="Toxicity"
-                        value={entry.toxicity}
+                        value={getToxicityDisplay(entry)}
                       />
                     </div>
 

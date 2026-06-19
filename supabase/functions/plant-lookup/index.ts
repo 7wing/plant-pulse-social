@@ -1,5 +1,19 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+function isBrokenOrPlaceholder(url: string | null): boolean {
+  if (!url || url.trim() === "") return true;
+  const bad = [
+    "upgrade_access",
+    "source.unsplash.com",
+    "placehold",
+    "placeholder",
+    "no_image",
+    "noimage",
+    "missing_image",
+  ];
+  return bad.some((b) => url.toLowerCase().includes(b));
+}
+
 // Helper to check if an image URL is a placeholder
 function isPlaceholderImage(url: string | null): boolean {
   if (!url) return true;
@@ -93,6 +107,39 @@ function corsResponse(status: number, body: unknown) {
       "Access-Control-Allow-Origin": "*",
     },
   });
+}
+
+async function getWikimediaCommonsImage(searchTerm: string): Promise<string | null> {
+  try {
+    const searchRes = await fetch(
+      `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchTerm)}&srnamespace=6&srlimit=5&format=json&origin=*`
+    );
+    if (!searchRes.ok) return null;
+    const searchData = await searchRes.json();
+    const results = searchData.query?.search || [];
+
+    for (const result of results) {
+      const fileTitle = result.title;
+      if (!fileTitle) continue;
+
+      const imageRes = await fetch(
+        `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=url|thumburl&iiurlwidth=400&format=json&origin=*`
+      );
+      if (!imageRes.ok) continue;
+      const imageData = await imageRes.json();
+      const pages = imageData.query?.pages;
+      const page = pages ? Object.values(pages)[0] as any : null;
+      if (page?.imageinfo?.[0]?.thumburl) {
+        return page.imageinfo[0].thumburl;
+      }
+      if (page?.imageinfo?.[0]?.url) {
+        return page.imageinfo[0].url;
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -286,7 +333,7 @@ Deno.serve(async (req: Request) => {
             firstMatch.default_image?.original_url ||
             firstMatch.default_image?.medium_url ||
             null;
-          if (perenualImage && !isPlaceholderImage(perenualImage)) {
+          if (perenualImage && !isBrokenOrPlaceholder(perenualImage)) {
             imageUrl = perenualImage;
           }
 
@@ -410,7 +457,7 @@ Deno.serve(async (req: Request) => {
     if (data.alias && !commonName) commonName = data.alias;
 
     // OpenPlantbook has real images - use them (overwrite even if Perenual gave a placeholder)
-    if (data.image_url && !isPlaceholderImage(data.image_url)) {
+    if (data.image_url && !isBrokenOrPlaceholder(data.image_url)) {
       imageUrl = data.image_url;
     }
 
@@ -446,7 +493,7 @@ Deno.serve(async (req: Request) => {
   // ========================================
   // STEP 4b: Wikipedia image fallback (if OpenPlantbook had no image)
   // ========================================
-  if (!imageUrl || isPlaceholderImage(imageUrl)) {
+  if (!imageUrl || isBrokenOrPlaceholder(imageUrl)) {
     try {
       const wikiImgRes = await fetch(
         `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(speciesName)}&prop=pageimages&format=json&pithumbsize=500&origin=*`
@@ -506,6 +553,19 @@ Deno.serve(async (req: Request) => {
     console.error("Wikipedia error:", err);
   }
 
+  // Wikimedia Commons image search fallback
+  if (!imageUrl || isBrokenOrPlaceholder(imageUrl)) {
+    const commonsImage = await getWikimediaCommonsImage(speciesName + " plant");
+    if (commonsImage) {
+      imageUrl = commonsImage;
+    } else if (commonName) {
+      const commonsImageCommon = await getWikimediaCommonsImage(commonName + " plant");
+      if (commonsImageCommon) {
+        imageUrl = commonsImageCommon;
+      }
+    }
+  }
+
   // ========================================
   // STEP 6: Fallbacks & toxicity check
   // ========================================
@@ -550,8 +610,8 @@ Deno.serve(async (req: Request) => {
   // ========================================
   // STEP 6b: Unsplash fallback image (last resort)
   // ========================================
-  if (!imageUrl) {
-    imageUrl = `https://source.unsplash.com/400x400/?${encodeURIComponent(speciesName)},plant`;
+  if (!imageUrl || isBrokenOrPlaceholder(imageUrl)) {
+    imageUrl = "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=400&h=400&fit=crop";
   }
 
   // ========================================

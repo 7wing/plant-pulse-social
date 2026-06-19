@@ -1,0 +1,16 @@
+- /explore when i search for 'ded' I find two plants yet they are not named that but it is because their content has words like needed so like we should make it that the search is on the biological name + nickname only, e.g Alocasia amazonica , elephant's ear
+- some plants have the levels for toxicity noted yet the toxic info says Care info not available yet.
+- Make sure all plants have the right info, name and images and all the fields are filled i do not want to see 'Care info not available yet'. 
+- let the names in the /explore be similar in for example they should all start with capital letter/taking care of the binomial nomenclature how it is supposed to be written.
+- When I click all in /explore not all plants that had been seeded are shown. Actually seed more so like all filters kind of have like 10+ if possible.
+
+- the completed should be hide everything not showing two always, and the toggle should be inline with the 'COMPLETED'
+- No of comments does not reflect, but the comment is there in the pop up.
+- In profile we already have the badges tab next to the saved tab so why don't we remove the badges earned below the edit profile?
+- In desktop center the profile material like in mobile, not leaning to a side
+- In profile the posts let us see material like caption the likes and comments, not just the picture
+- In profile the saved let us see the same format as in community, who posted, comments, caption, likes, saved part now will be selected you get?....it is too dull as just a picture.
+- We need a way to calculate what is classified as a trending hashtag. how many times does it have to posted by per user per post is the best to classify something as a trending hashtag?best case scenario how do other apps do it?
+- That good morning does it change with someone's local time or to good night/evening??? and does a red leaf show there are pending tasks then it changes to a green  leaf when there are no pending tasks??
+
+test the events/challenge and badges, test notifications, add to my collection/bookmark

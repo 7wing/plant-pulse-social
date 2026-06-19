@@ -6,7 +6,27 @@ const TERMS = [
   "english ivy", "parlor palm", "chinese evergreen", "yucca filamentosa",
   "begonia", "phalaenopsis", "boston fern", "pachira aquatica",
   "alocasia", "anthurium", "strelitzia reginae", "euphorbia trigona",
-  "eucalyptus", "lavandula angustifolia"
+  "eucalyptus", "lavandula angustifolia",
+  // Additional indoor
+  "aglaonema modestum", "dieffenbachia seguine", "dracaena fragrans",
+  "epipremnum aureum", "spathiphyllum wallisii",
+  // succulents
+  "haworthia attenuata", "sedum morganianum", "kalanchoe blossfeldiana",
+  "crassula ovata", "aloe aristata",
+  // rare
+  "philodendron pink princess", "monstera adansonii",
+  "string of pearls", "hoya carnosa",
+  // propagation
+  "tradescantia zebrina", "pilea peperomioides",
+  "rhaphidophora tetrasperma", "peperomia obtusifolia",
+  // gardening/outdoor
+  "hosta plantaginea", "hemerocallis fulva", "hydrangea macrophylla",
+  "rosa chinensis", "lavandula angustifolia",
+  // tropical
+  "heliconia rostrata", "alpinia purpurata", "caladium bicolor",
+  // cacti
+  "gymnocalycium mihanovichii", "mammillaria hahniana", "opuntia microdasys",
+  "echinocactus grusonii", "astrophytum myriostigma",
 ];
 
 async function seed(term, i) {

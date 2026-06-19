@@ -1,4 +1,4 @@
-import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Users, Play, Moon, Sun as SunIcon, Monitor, Loader2, LogOut, MoreHorizontal, ImagePlus, Eye, EyeOff, Mail, Lock, Sprout, Trophy, Gem, Hand } from "lucide-react";
+import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Play, Moon, Sun as SunIcon, Monitor, Loader2, LogOut, MoreHorizontal, ImagePlus, Eye, EyeOff, Mail, Lock, Sprout, Trophy, Gem, Hand } from "lucide-react";
 import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -19,6 +19,7 @@ import { useLiveStreams } from "@/queries/liveStreams";
 import { useUpload } from "@/hooks/useUpload";
 import { FollowersList } from "@/components/FollowersList";
 import { ReportUserSheet } from "@/components/ReportUserSheet";
+import PostCard from "@/components/PostCard";
 import {
   Dialog,
   DialogContent,
@@ -555,9 +556,9 @@ export default function ProfilePage() {
 
         {/* Profile info - Desktop: horizontal layout */}
         {profileLoading ? (
-          <div className="flex flex-col md:flex-row md:items-center gap-4 pt-4 pb-6 px-4">
-            <Skeleton className="w-24 h-24 rounded-full mx-auto md:mx-0" />
-            <div className="flex flex-col items-center md:items-start gap-2 flex-1">
+          <div className="flex flex-col items-center gap-4 pt-4 pb-6 px-4">
+            <Skeleton className="w-24 h-24 rounded-full mx-auto" />
+            <div className="flex flex-col items-center gap-2">
               <Skeleton className="h-5 w-32" />
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-3 w-full max-w-[250px]" />
@@ -572,9 +573,9 @@ export default function ProfilePage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col md:flex-row md:items-start gap-4 pt-4 pb-6 px-4">
+          <div className="flex flex-col items-center gap-4 pt-4 pb-6 px-4">
             {/* Avatar */}
-            <div className="relative mx-auto md:mx-0 shrink-0">
+            <div className="relative mx-auto shrink-0">
               <img src={avatar} alt={displayName} className="w-24 h-24 rounded-full object-cover ring-4 ring-primary/30" />
               <div className="absolute -bottom-1 -right-1 w-8 h-8 gradient-leaf rounded-full flex items-center justify-center border-2 border-background">
                 <Leaf size={14} className="text-primary-foreground" />
@@ -582,7 +583,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Info + Stats */}
-            <div className="flex-1 flex flex-col items-center md:items-start">
+            <div className="flex flex-col items-center md:items-center">
               <h2 className="text-lg font-bold mt-0 md:mt-2">{displayName}</h2>
               {handle && <p className="text-sm text-muted-foreground">{handle}</p>}
               {location && (
@@ -592,12 +593,12 @@ export default function ProfilePage() {
                 </div>
               )}
               {bio && (
-                <p className="text-sm text-center md:text-left mt-2 text-muted-foreground max-w-[250px] md:max-w-md">
+                <p className="text-sm text-center mt-2 text-muted-foreground max-w-[250px] md:max-w-md">
                   {bio}
                 </p>
               )}
               {profileInterests.length > 0 && (
-                <p className="text-xs text-center md:text-left mt-1 text-muted-foreground flex items-center gap-1">
+                <p className="text-xs text-center mt-1 text-muted-foreground flex items-center gap-1">
                   <Sprout size={14} className="inline text-primary" /> {profileInterests.join(", ")}
                 </p>
               )}
@@ -679,26 +680,6 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Badges */}
-      <div className="px-4 py-3">
-        <div className="flex items-center gap-2 mb-2">
-          <Award size={14} className="text-primary" />
-          <span className="text-xs font-bold">Badges Earned</span>
-        </div>
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-          {[
-            { name: "Master Propagator", icon: Sprout },
-            { name: "Plant Parent 100", icon: Trophy },
-            { name: "Rare Collector", icon: Gem },
-          ].map((b) => (
-            <div key={b.name} className="flex items-center gap-1.5 bg-card rounded-full px-3 py-1.5 shadow-card min-w-fit border border-border">
-              <b.icon size={16} className="text-primary" />
-              <span className="text-xs font-medium whitespace-nowrap">{b.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Profile tabs */}
       <div className="px-4">
         <div className="flex gap-1 bg-muted rounded-xl p-1 mb-4">
@@ -747,62 +728,29 @@ export default function ProfilePage() {
       {/* Tab content */}
       {activeTab === "posts" && (
         <div className="px-4 space-y-3">
-          {isOwnProfile ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
-              {postsLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-lg" />
-                ))
-              ) : profilePosts.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
-                  No posts yet. Share your first plant update!
-                </div>
-              ) : (
-                profilePosts.map((post) => (
-                  <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
-                    <img
-                      src={post.image_url || AVATAR}
-                      alt={post.content || "Post"}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
-                      <MessageCircle size={10} className="text-primary-foreground" />
-                      <span className="text-[10px] text-primary-foreground font-medium">
-                        {post.comments_count ?? 0}
-                      </span>
-                    </div>
+          {postsLoading ? (
+            Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden">
+                <Skeleton className="w-full h-64" />
+                <div className="p-3 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                  <div className="flex items-center gap-2 pt-1">
+                    <Skeleton className="w-8 h-8 rounded-full" />
+                    <Skeleton className="h-3 w-24" />
                   </div>
-                ))
-              )}
+                </div>
+              </div>
+            ))
+          ) : profilePosts.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground text-sm">
+              No posts yet.
             </div>
           ) : (
-            /* Other user's posts */
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
-              {postsLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-lg" />
-                ))
-              ) : profilePosts.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
-                  No posts yet.
-                </div>
-              ) : (
-                profilePosts.map((post) => (
-                  <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
-                    <img
-                      src={post.image_url || AVATAR}
-                      alt={post.content || "Post"}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
-                      <MessageCircle size={10} className="text-primary-foreground" />
-                      <span className="text-[10px] text-primary-foreground font-medium">
-                        {post.comments_count ?? 0}
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+              {profilePosts.map((post) => (
+                <PostCard key={post.id} post={post} />
+              ))}
             </div>
           )}
         </div>
@@ -832,30 +780,28 @@ export default function ProfilePage() {
           </div>
 
           {savedSubTab === "posts" && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
               {savedLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                  <div key={i} className="bg-card rounded-2xl shadow-card overflow-hidden">
+                    <Skeleton className="w-full h-64" />
+                    <div className="p-3 space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-3 w-2/3" />
+                      <div className="flex items-center gap-2 pt-1">
+                        <Skeleton className="w-8 h-8 rounded-full" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </div>
+                  </div>
                 ))
               ) : savedPosts.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-muted-foreground text-sm">
+                <div className="text-center py-12 text-muted-foreground text-sm">
                   No saved posts yet.
                 </div>
               ) : (
                 savedPosts.map((post) => (
-                  <div key={post.id} className="aspect-square rounded-lg overflow-hidden relative">
-                    <img
-                      src={post.image_url || AVATAR}
-                      alt={post.caption || "Post"}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-foreground/40 backdrop-blur-sm rounded-full px-1.5 py-0.5">
-                      <MessageCircle size={10} className="text-primary-foreground" />
-                      <span className="text-[10px] text-primary-foreground font-medium">
-                        {post.comments_count ?? 0}
-                      </span>
-                    </div>
-                  </div>
+                  <PostCard key={post.id} post={post} />
                 ))
               )}
             </div>

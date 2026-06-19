@@ -91,6 +91,9 @@ export default function CareDashboard() {
     }
   };
 
+  const hasPendingTasks = todayTasks.length > 0 || overdueTasks.length > 0;
+  const leafColor = hasPendingTasks ? "text-red-500" : "text-green-500";
+
   const isLoading = plantsLoading || tasksLoading;
 
   if (isLoading) {
@@ -114,7 +117,9 @@ export default function CareDashboard() {
     <div className="pb-4">
       {/* Greeting + stats */}
       <div className="px-4 pt-2 pb-3">
-        <p className="text-xs text-muted-foreground">{greeting} <Leaf size={14} className="inline text-plant-live" /></p>
+        <p className="text-xs text-muted-foreground">
+          {greeting} <Leaf size={14} className={`inline ${leafColor}`} />
+        </p>
         <p className="text-sm font-bold">{displayName}</p>
         <p className="text-xs text-muted-foreground mt-1">
           {totalPlants} plants · {healthyPlants} healthy · {needCarePlants} need care
@@ -182,31 +187,28 @@ export default function CareDashboard() {
             {/* Completed tasks */}
             {totalCompleted > 0 && (
               <div>
-                {showCompleted ? (
-                  <CareTaskList
-                    title="Completed"
-                    tasks={allCompletedTasks}
-                    onComplete={handleCompleteTask}
-                    completingTaskId={completingTaskId}
-                    emptyMessage="No completed tasks"
-                    emptyIcon={<CheckCircle2 size={24} className="text-muted-foreground" />}
-                  />
-                ) : (
-                  <CareTaskList
-                    title="Completed"
-                    tasks={allCompletedTasks.slice(0, 2)}
-                    onComplete={handleCompleteTask}
-                    completingTaskId={completingTaskId}
-                    emptyMessage="No completed tasks"
-                    emptyIcon={<CheckCircle2 size={24} className="text-muted-foreground" />}
-                  />
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wide px-1">
+                    Completed
+                  </h3>
+                  <button
+                    onClick={() => setShowCompleted(!showCompleted)}
+                    className="text-xs text-primary font-medium hover:underline px-1"
+                  >
+                    {showCompleted ? "Hide" : `Show all ${totalCompleted}`}
+                  </button>
+                </div>
+                {showCompleted && (
+                  <div className="mt-2">
+                    <CareTaskList
+                      tasks={allCompletedTasks}
+                      onComplete={handleCompleteTask}
+                      completingTaskId={completingTaskId}
+                      emptyMessage="No completed tasks"
+                      emptyIcon={<CheckCircle2 size={24} className="text-muted-foreground" />}
+                    />
+                  </div>
                 )}
-                <button
-                  onClick={() => setShowCompleted(!showCompleted)}
-                  className="text-xs text-primary font-medium hover:underline mt-2 px-1"
-                >
-                  {showCompleted ? "Hide completed" : `Show all ${totalCompleted} completed`}
-                </button>
               </div>
             )}
 

@@ -11,6 +11,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { usePlantLibraryEntry, useSavedGuides, useSaveGuide, useUnsaveGuide } from "@/queries/plantLibrary";
+import { getToxicityDisplay } from "@/lib/plantLibraryUtils";
 import { useAddPlant } from "@/queries/plants";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -161,11 +162,13 @@ export default function CareGuideDetailPage() {
       <div className="flex-1">
         <p className="text-xs text-muted-foreground">{label}</p>
         <p className="text-sm font-medium">
-          {value || "Care info not available yet"}
+          {value && value.trim() ? value : "Care info not available yet"}
         </p>
       </div>
     </div>
   );
+
+
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
@@ -177,6 +180,9 @@ export default function CareGuideDetailPage() {
             src={entry.image_url || DEFAULT_IMAGE}
             alt={entry.common_name || entry.species_name || "Plant"}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE;
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-foreground/20" />
 
@@ -238,14 +244,14 @@ export default function CareGuideDetailPage() {
                 <div className="flex-1">
                   <p className="text-xs text-muted-foreground">Difficulty</p>
                   <p className="text-sm font-medium capitalize">
-                    {entry.difficulty || "Not available"}
+                    {entry.difficulty && entry.difficulty.trim() ? entry.difficulty : "Care info not available yet"}
                   </p>
                 </div>
               </div>
               <CareInfoRow
                 icon={AlertTriangle}
                 label="Toxicity"
-                value={entry.toxicity}
+                value={getToxicityDisplay(entry)}
               />
             </div>
           </div>
@@ -315,6 +321,9 @@ export default function CareGuideDetailPage() {
                 src={entry.image_url || DEFAULT_IMAGE}
                 alt={entry.common_name || entry.species_name || "Plant"}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE;
+                }}
               />
             </div>
 
@@ -342,14 +351,14 @@ export default function CareGuideDetailPage() {
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground">Difficulty</p>
                     <p className="text-sm font-medium capitalize">
-                      {entry.difficulty || "Not available"}
+                      {entry.difficulty && entry.difficulty.trim() ? entry.difficulty : "Care info not available yet"}
                     </p>
                   </div>
                 </div>
                 <CareInfoRow
                   icon={AlertTriangle}
                   label="Toxicity"
-                  value={entry.toxicity}
+                  value={getToxicityDisplay(entry)}
                 />
               </div>
             </div>
@@ -397,6 +406,9 @@ export default function CareGuideDetailPage() {
                 src={entry.image_url || DEFAULT_IMAGE}
                 alt={entry.species_name || "Plant"}
                 className="w-12 h-12 rounded-lg object-cover"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE;
+                }}
               />
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">

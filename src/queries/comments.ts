@@ -48,12 +48,6 @@ export function useAddComment() {
         .single();
 
       if (error) throw error;
-
-      const { error: rpcError } = await supabase.rpc("increment_comments", {
-        p_post_id: comment.post_id!,
-      });
-      if (rpcError) throw rpcError;
-
       return data;
     },
     onMutate: async (comment) => {
@@ -88,6 +82,7 @@ export function useAddComment() {
     onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: ["comments", variables.post_id] });
       queryClient.invalidateQueries({ queryKey: ["feed", "posts"] });
+      queryClient.invalidateQueries({ queryKey: ["savedPosts"] });
     },
   });
 }

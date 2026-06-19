@@ -22,6 +22,33 @@ const categorySearchTerms: Record<string, string> = {
   Cacti: "cactus",
 };
 
+function formatBinomial(name: string | null): string {
+  if (!name) return "";
+  const parts = name.split(/\s+/);
+  if (parts.length === 0) return name;
+  parts[0] = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+  for (let i = 1; i < parts.length; i++) {
+    parts[i] = parts[i].toLowerCase();
+  }
+  return parts.join(" ");
+}
+
+function formatCommonName(name: string | null): string {
+  if (!name) return "";
+  return name
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function formatEntry(entry: PlantLibraryEntry): PlantLibraryEntry {
+  return {
+    ...entry,
+    species_name: formatBinomial(entry.species_name),
+    common_name: formatCommonName(entry.common_name),
+  };
+}
+
 export default function ExplorePage() {
   const [active, setActive] = useState("All");
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -223,7 +250,7 @@ export default function ExplorePage() {
                 {displayResults.map((entry) => (
                   <PlantLibraryCard
                     key={entry.id}
-                    entry={entry}
+                    entry={formatEntry(entry)}
                     onClick={() => {
                       setSelectedGuideId(entry.id);
                       setGuideSheetOpen(true);
@@ -236,7 +263,7 @@ export default function ExplorePage() {
                 {displayResults.map((entry) => (
                   <CareGuideCard
                     key={entry.id}
-                    entry={entry}
+                    entry={formatEntry(entry)}
                     onClick={() => {
                       setSelectedGuideId(entry.id);
                       setGuideSheetOpen(true);
@@ -292,10 +319,10 @@ export default function ExplorePage() {
           ) : allEntries.length > 0 ? (
             view === "grid" ? (
               <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
-                {allEntries.slice(0, 12).map((entry) => (
+                {allEntries.map((entry) => (
                   <PlantLibraryCard
                     key={entry.id}
-                    entry={entry}
+                    entry={formatEntry(entry)}
                     onClick={() => {
                       setSelectedGuideId(entry.id);
                       setGuideSheetOpen(true);
@@ -305,10 +332,10 @@ export default function ExplorePage() {
               </div>
             ) : (
               <div className="space-y-3 px-4 pb-4">
-                {allEntries.slice(0, 12).map((entry) => (
+                {allEntries.map((entry) => (
                   <CareGuideCard
                     key={entry.id}
-                    entry={entry}
+                    entry={formatEntry(entry)}
                     onClick={() => {
                       setSelectedGuideId(entry.id);
                       setGuideSheetOpen(true);

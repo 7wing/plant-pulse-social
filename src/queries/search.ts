@@ -53,3 +53,36 @@ export function useTagSearch(query: string) {
     enabled: query.length > 1,
   });
 }
+
+export function useTrendingTags(limit = 8) {
+  return useQuery({
+    queryKey: ["trendingTags"],
+    queryFn: async () => {
+      const since = new Date();
+      since.setDate(since.getDate() - 7);
+
+      const { data, error } = await supabase
+        .from("posts")
+        .select("tags")
+        .not("tags", "is", null)
+        .gte("created_at", since.toISOString())
+        .limit(200);
+
+      if (error) throw error;
+
+      const counts = new Map<string, number>();
+      (data ?? []).forEach((post) => {
+        if (post.tags) {
+          post.tags.forEach((tag: string) => {
+            counts.set(tag, (counts.get(tag) ?? 0) + 1);
+          });
+        }
+      });
+
+      return Array.from(counts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([tag]) => tag);
+    },
+  });
+}

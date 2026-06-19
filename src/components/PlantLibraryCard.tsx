@@ -32,6 +32,9 @@ export default function PlantLibraryCard({ entry, onClick }: PlantLibraryCardPro
           alt={entry.common_name || entry.species_name || "Plant"}
           className="w-full h-full object-cover"
           loading="lazy"
+          onError={(e) => {
+            (e.currentTarget as HTMLImageElement).src = DEFAULT_IMAGE;
+          }}
         />
       </div>
       <div className="p-2.5">
