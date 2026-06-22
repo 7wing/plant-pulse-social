@@ -1,5 +1,6 @@
 import { Search, Globe, Grid3X3, List } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import SectionHeader from "@/components/SectionHeader";
 import PlantLibraryCard from "@/components/PlantLibraryCard";
@@ -9,6 +10,15 @@ import { usePlantLibrarySearch, usePlantLibraryAll } from "@/queries/plantLibrar
 import type { PlantLibraryEntry } from "@/queries/plantLibrary";
 
 const categories = ["All", "Indoor", "Succulents", "Rare", "Propagation", "Gardening", "Tropical", "Cacti"];
+
+const onlineSearchMessages = [
+  "Searching plant databases...",
+  "Looking up Wikipedia...",
+  "Finding care requirements...",
+  "Fetching plant images...",
+  "Building plant profile...",
+  "Almost there...",
+];
 
 // Map categories to search terms for filtering
 const categorySearchTerms: Record<string, string> = {
@@ -58,7 +68,23 @@ export default function ExplorePage() {
   const [onlineResults, setOnlineResults] = useState<PlantLibraryEntry[]>([]);
   const [selectedGuideId, setSelectedGuideId] = useState<string | null>(null);
   const [guideSheetOpen, setGuideSheetOpen] = useState(false);
+  const [onlineSearchStatus, setOnlineSearchStatus] = useState("Searching plant databases...");
+  const [onlineSearchFailed, setOnlineSearchFailed] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const autoSearchedQueryRef = useRef<string | null>(null);
+  const queryClient = useQueryClient();
+
+  // Rotate through status messages while online search is in-flight
+  useEffect(() => {
+    if (!isSearchingOnline) return;
+    let index = 0;
+    setOnlineSearchStatus(onlineSearchMessages[0]);
+    const interval = setInterval(() => {
+      index = (index + 1) % onlineSearchMessages.length;
+      setOnlineSearchStatus(onlineSearchMessages[index]);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isSearchingOnline]);
 
   // Determine what query to use (search or category)
   const effectiveQuery = searchQuery.trim() || categorySearchTerms[active] || "";
@@ -98,46 +124,68 @@ export default function ExplorePage() {
     libraryResults.length === 0 &&
     onlineResults.length === 0;
 
+  const showRetryButton = showOnlineSearch && onlineSearchFailed;
+
   // Handle search online
-  const handleSearchOnline = async () => {
+  const handleSearchOnline = useCallback(async () => {
     if (!effectiveQuery.trim()) return;
 
     setIsSearchingOnline(true);
+    setOnlineSearchFailed(false);
     try {
+      const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/plant-lookup`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "apikey": ANON_KEY,
+            "Authorization": `Bearer ${ANON_KEY}`,
           },
           body: JSON.stringify({ query: effectiveQuery }),
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to search online");
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.error || `HTTP ${response.status}`);
       }
 
       const data = await response.json();
 
-      if (data && data.result) {
-        const result = data.result;
-        setOnlineResults([result]);
+      if (data?.found && data.data) {
+        setOnlineResults([data.data]);
+        // Invalidate so the new entry is cached for future searches
+        queryClient.invalidateQueries({ queryKey: ["plantLibrarySearch"] });
+        queryClient.invalidateQueries({ queryKey: ["plantLibraryAll"] });
       } else {
         toast.error("No results found online either");
       }
     } catch (err) {
-      // silent failure
+      setOnlineSearchFailed(true);
+      toast.error(
+        err instanceof Error ? err.message : "Online search failed. Tap below to retry."
+      );
     } finally {
       setIsSearchingOnline(false);
     }
-  };
+  }, [effectiveQuery, queryClient]);
+
+  // Auto-trigger online search when no local results found
+  useEffect(() => {
+    if (showOnlineSearch && effectiveQuery !== autoSearchedQueryRef.current) {
+      autoSearchedQueryRef.current = effectiveQuery;
+      handleSearchOnline();
+    }
+  }, [showOnlineSearch, effectiveQuery, handleSearchOnline]);
 
   // Handle clear search
   const handleClearSearch = () => {
     setSearchQuery("");
     setOnlineResults([]);
+    setOnlineSearchFailed(false);
+    autoSearchedQueryRef.current = null;
   };
 
   // All results to display (library + online)
@@ -165,6 +213,8 @@ export default function ExplorePage() {
               onChange={(e) => {
                 setSearchQuery(e.target.value);
                 setOnlineResults([]);
+                setOnlineSearchFailed(false);
+                autoSearchedQueryRef.current = null;
               }}
               className="w-full bg-muted rounded-xl pl-10 pr-10 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
@@ -198,6 +248,8 @@ export default function ExplorePage() {
                   if (cat !== "All") {
                     setSearchQuery("");
                     setOnlineResults([]);
+                    setOnlineSearchFailed(false);
+                    autoSearchedQueryRef.current = null;
                   }
                 }}
                 className={active === cat ? "chip-active" : "chip"}
@@ -229,7 +281,26 @@ export default function ExplorePage() {
             }
           />
 
-          {isLoading ? (
+          {isSearchingOnline ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="relative mb-6">
+                <Globe size={56} className="text-primary animate-pulse" />
+                <div className="absolute -inset-3 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
+              </div>
+              <h3 className="text-lg font-semibold text-center mb-1">
+                Searching online...
+              </h3>
+              <p className="text-sm text-muted-foreground text-center mb-2">
+                Looking up &ldquo;{effectiveQuery}&rdquo;
+              </p>
+              <p className="text-sm text-primary/80 text-center font-medium animate-pulse min-h-[1.25rem]">
+                {onlineSearchStatus}
+              </p>
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                This may take a few seconds
+              </p>
+            </div>
+          ) : isLibraryLoading ? (
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 px-4 pb-2">
               {Array.from({ length: 6 }).map((_, i) => (
                 <div
@@ -272,18 +343,25 @@ export default function ExplorePage() {
                 ))}
               </div>
             )
-          ) : showOnlineSearch ? (
+          ) : showRetryButton ? (
             <div className="flex flex-col items-center justify-center py-12 px-4">
               <Globe size={48} className="text-muted-foreground mb-4" />
               <p className="text-sm text-muted-foreground text-center mb-4">
-                No results found in our library for "{effectiveQuery}"
+                No results found in our library for &ldquo;{effectiveQuery}&rdquo;. Online search didn&apos;t work.
               </p>
               <button
                 onClick={handleSearchOnline}
                 className="px-6 py-3 rounded-xl gradient-leaf text-primary-foreground font-semibold shadow-card hover:shadow-elevated transition-shadow"
               >
-                Search online
+                Search online again
               </button>
+            </div>
+          ) : showOnlineSearch ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <Globe size={48} className="text-muted-foreground mb-4 animate-pulse" />
+              <p className="text-sm text-muted-foreground text-center mb-4">
+                No results found in our library for &ldquo;{effectiveQuery}&rdquo;. Searching online automatically...
+              </p>
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 px-4">
