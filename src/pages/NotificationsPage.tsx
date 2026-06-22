@@ -206,7 +206,7 @@ export default function NotificationsPage() {
 
   if (isLoading) {
     return (
-      <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
+      <div className="pb-20 md:pb-4 min-h-screen md:min-h-0 md:max-w-6xl md:mx-auto">
         <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg">
           <div className="flex items-center justify-between px-4 pt-4 pb-3">
             <Skeleton className="h-6 w-32" />
@@ -228,7 +228,7 @@ export default function NotificationsPage() {
   const hasNotifications = notifications.length > 0;
 
   return (
-    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
+    <div className="pb-20 md:pb-4 min-h-screen md:min-h-0 md:max-w-6xl md:mx-auto">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg">
         <div className="flex items-center justify-between px-4 pt-4 pb-3">

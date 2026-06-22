@@ -450,7 +450,7 @@ export default function ProfilePage() {
   );
 
   return (
-    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
+    <div className="pb-20 md:pb-4 min-h-screen md:min-h-0 md:max-w-6xl md:mx-auto">
       {/* Followers List Modal */}
       <FollowersList
         userId={profile?.id || ""}
@@ -504,6 +504,26 @@ export default function ProfilePage() {
                   </button>
                 </PopoverContent>
               </Popover>
+            )}
+
+            {isOwnProfile && (
+              <button
+                onClick={() => {
+                  reset({
+                    display_name: profile?.display_name || "",
+                    username: profile?.username || "",
+                    bio: profile?.bio || "",
+                    location: profile?.location || "",
+                    hide_location: false,
+                    interests: profileInterests,
+                  });
+                  setEditOpen(true);
+                }}
+                className="w-9 h-9 bg-card/80 backdrop-blur-sm rounded-full flex items-center justify-center"
+                aria-label="Edit Profile"
+              >
+                <Edit2 size={18} />
+              </button>
             )}
 
             {isOwnProfile && (
@@ -654,26 +674,6 @@ export default function ProfilePage() {
                     </button>
                   </>
                 )}
-                {isOwnProfile && (
-                  <button
-                    onClick={() => {
-                      reset({
-                        display_name: profile?.display_name || "",
-                        username: profile?.username || "",
-                        bio: profile?.bio || "",
-                        location: profile?.location || "",
-                        hide_location: false,
-                        interests: profileInterests,
-                      });
-                      setEditOpen(true);
-                    }}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold"
-                  >
-                    <Edit2 size={14} />
-                    Edit Profile
-                  </button>
-                )}
-
               </div>
             </div>
           </div>

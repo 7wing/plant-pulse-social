@@ -32,7 +32,7 @@ export function usePlantLibrarySearch(query: string) {
       const { data, error } = await supabase
         .from("plant_library")
         .select("*")
-        .or(`species_name.ilike.%${query}%,common_name.ilike.%${query}%`)
+        .or(`species_name.ilike.%${query}%,common_name.ilike.%${query}%,description.ilike.%${query}%,light.ilike.%${query}%,water.ilike.%${query}%,difficulty.ilike.%${query}%`)
         .limit(20);
 
       if (error) throw error;

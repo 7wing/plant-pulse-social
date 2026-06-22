@@ -17,7 +17,7 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
+    <div className="pb-20 md:pb-4 min-h-screen md:min-h-0 md:max-w-6xl md:mx-auto">
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-3">
         <h1 className="text-xl font-bold">Messages</h1>
       </div>

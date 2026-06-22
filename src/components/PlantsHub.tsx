@@ -30,7 +30,7 @@ export default function PlantsHub() {
   ).sort((a, b) => a.nickname.localeCompare(b.nickname));
 
   return (
-    <div className="pb-20 md:pb-4 min-h-screen md:max-w-6xl md:mx-auto">
+    <div className="pb-20 md:pb-4 min-h-screen md:min-h-0 md:max-w-6xl md:mx-auto">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-2">
         <div className="flex items-center justify-between mb-3">
@@ -42,7 +42,7 @@ export default function PlantsHub() {
             >
               <ArrowLeft size={18} />
             </button>
-            <h1 className="text-xl font-bold">My Plants</h1>
+            <h1 className="text-xl font-bold">My Collection</h1>
           </div>
           <div className="flex items-center gap-2">
             <button

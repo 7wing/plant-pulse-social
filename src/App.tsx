@@ -51,7 +51,7 @@ function AppLayout() {
     location.pathname.startsWith("/live/");
 
   return (
-    <div className="max-w-lg md:max-w-7xl mx-auto relative min-h-screen bg-background md:pt-20">
+    <div className="max-w-lg md:max-w-7xl mx-auto relative min-h-screen md:min-h-0 bg-background md:pt-20">
       {!hideNav && <FloatingNav />}
 
       {/* Desktop top-right: Notification bell + Profile */}
