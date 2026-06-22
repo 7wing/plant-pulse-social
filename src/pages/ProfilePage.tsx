@@ -1,4 +1,4 @@
-import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Play, Moon, Sun as SunIcon, Monitor, Loader2, LogOut, MoreHorizontal, ImagePlus, Eye, EyeOff, Mail, Lock, Sprout, Trophy, Gem, Hand } from "lucide-react";
+import { Settings, Edit2, Video, Plus, MapPin, Award, Leaf, MessageCircle, Play, Moon, Sun as SunIcon, Monitor, Loader2, LogOut, MoreHorizontal, ImagePlus, Eye, EyeOff, Mail, Lock, Sprout, Trophy, Gem, Hand, Trash2 } from "lucide-react";
 import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -28,6 +28,16 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Sheet,
   SheetContent,
@@ -97,6 +107,7 @@ export default function ProfilePage() {
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const isMobile = useIsMobile();
 
   const { data: profile, isLoading: profileLoading } = useProfile(id);
@@ -177,6 +188,33 @@ export default function ProfilePage() {
     }
 
     setEditOpen(false);
+  };
+
+  const handleDeleteAccount = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Not authenticated");
+      return;
+    }
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to delete account" }));
+        toast.error(err.error || "Failed to delete account");
+        return;
+      }
+      await supabase.auth.signOut();
+      navigate("/login");
+      toast.success("Account deleted");
+    } catch {
+      toast.error("Failed to delete account");
+    }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -419,6 +457,25 @@ export default function ProfilePage() {
             <p className="text-xs text-destructive">{errors.confirm_password.message}</p>
           )}
         </div>
+      </div>
+
+      {/* Delete Account section */}
+      <div className="space-y-3 pt-4 border-t border-destructive/20">
+        <p className="text-sm font-semibold flex items-center gap-2 text-destructive">
+          <Trash2 size={16} />
+          Danger Zone
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Once you delete your account, there is no going back. All your data, posts, and plants will be permanently removed.
+        </p>
+        <button
+          type="button"
+          onClick={() => setDeleteDialogOpen(true)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-destructive/10 text-destructive text-sm font-semibold hover:bg-destructive/20 transition-colors"
+        >
+          <Trash2 size={16} />
+          Delete Account
+        </button>
       </div>
 
       <div className="flex gap-2 pt-2">
@@ -1006,6 +1063,27 @@ export default function ProfilePage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Delete Account Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. All your data, posts, and plants will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Account
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

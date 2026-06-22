@@ -129,14 +129,30 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    const { error } = await supabase.auth.admin.deleteUser(profile!.id);
-    if (error) {
-      toast.error("Failed to delete account");
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast.error("Not authenticated");
       return;
     }
-    await supabase.auth.signOut();
-    navigate("/login");
-    toast.success("Account deleted");
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "Failed to delete account" }));
+        toast.error(err.error || "Failed to delete account");
+        return;
+      }
+      await supabase.auth.signOut();
+      navigate("/login");
+      toast.success("Account deleted");
+    } catch {
+      toast.error("Failed to delete account");
+    }
   };
 
   const navItems: { id: SettingsSection; label: string; icon: React.ElementType }[] = [

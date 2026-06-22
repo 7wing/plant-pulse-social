@@ -324,6 +324,29 @@ export default function CommunityPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground px-1">No active challenges or events</p>
                 )}
+
+                {/* Mobile: Trending tags */}
+                <div className="pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp size={14} className="text-primary" />
+                    <span className="text-xs font-semibold text-primary">Trending</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {trendingTags.length > 0 ? (
+                      trendingTags.map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => setSearchQuery(tag)}
+                          className="text-xs bg-primary/10 text-primary px-2.5 py-1 rounded-full font-medium cursor-pointer hover:bg-primary/20 transition-colors"
+                        >
+                          #{tag}
+                        </button>
+                      ))
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No trending tags</p>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Posts Feed */}
@@ -367,9 +390,7 @@ export default function CommunityPage() {
         </div>
 
         {/* Right Sidebar - Challenges (Desktop only) */}
-        <div className="hidden md:block w-80 flex-shrink-0">
-          {/* This Week Section */}
-          <div className="sticky top-24 space-y-3">
+        <div className="hidden md:block w-80 flex-shrink-0 sticky top-40 self-start space-y-3 z-40">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold">This week</h2>
               <Button
@@ -422,7 +443,6 @@ export default function CommunityPage() {
               </div>
             </div>
           </div>
-        </div>
       </div>
 
       {/* Challenge Event Detail Sheet */}

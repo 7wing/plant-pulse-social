@@ -149,10 +149,10 @@ export default function ExplorePage() {
 
   return (
     <div className="pb-20 md:pb-4 min-h-screen md:min-h-0 md:max-w-6xl md:mx-auto">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-2">
+      {/* Header — search bar + filters sticky */}
+      <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-lg px-4 pt-4 pb-3">
         <h1 className="text-xl font-bold mb-3">Explore</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mb-3">
           <div className="relative flex-1">
             <Search
               size={18}
@@ -186,34 +186,34 @@ export default function ExplorePage() {
             {view === "grid" ? <List size={18} /> : <Grid3X3 size={18} />}
           </button>
         </div>
-      </div>
 
-      {/* Category chips + Grid/List Toggle */}
-      <div className="flex items-center gap-2 px-4 py-3">
-        <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => {
-                setActive(cat);
-                if (cat !== "All") {
-                  setSearchQuery("");
-                  setOnlineResults([]);
-                }
-              }}
-              className={active === cat ? "chip-active" : "chip"}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* Category chips + Grid/List Toggle */}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide flex-1">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => {
+                  setActive(cat);
+                  if (cat !== "All") {
+                    setSearchQuery("");
+                    setOnlineResults([]);
+                  }
+                }}
+                className={active === cat ? "chip-active" : "chip"}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setView(view === "grid" ? "list" : "grid")}
+            className="hidden md:block p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors shrink-0"
+            aria-label="Toggle view"
+          >
+            {view === "grid" ? <List size={18} /> : <Grid3X3 size={18} />}
+          </button>
         </div>
-        <button
-          onClick={() => setView(view === "grid" ? "list" : "grid")}
-          className="hidden md:block p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors shrink-0"
-          aria-label="Toggle view"
-        >
-          {view === "grid" ? <List size={18} /> : <Grid3X3 size={18} />}
-        </button>
       </div>
 
       {/* Results section */}
